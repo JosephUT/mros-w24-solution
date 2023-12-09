@@ -16,6 +16,8 @@
 #include "mros/mros.hpp"
 // #include "jsonRPC.hpp"
 
+using namespace std::chrono_literals;
+
 class PublisherBase {
 public:
     friend class Node;
@@ -41,10 +43,17 @@ public:
 private:
     bool status();
 
+    void socketListener();
+
     std::string topic_name_;
     std::uint32_t queue_size_;
     
     std::weak_ptr<Node> node_;
+
+    std::thread socketListenerThread_;
+
+    std::vector<int> subscribers_;
+    std::mutex subscribersMutex_;
     
     Logger &logger_;
     MROS &core_;
@@ -63,6 +72,8 @@ Publisher<MessageT>::Publisher(std::weak_ptr<Node> node, std::string topic_name,
     logger_.debug("Initializing Publisher");
     core_.registerHandler();
 
+    socketListenerThread_ = std::thread(&Publisher::socketListener, this);
+
     logger_.debug("Publisher constructor complete");
 }
 
@@ -71,12 +82,23 @@ Publisher<MessageT>::~Publisher() {
     LogContext context("Publisher::~Publisher");
     logger_.debug("Cleaning up");
 
+    socketListenerThread_.join();
+    logger_.debug("After socketListenerThread join");
+
+    //TODO close all sockets
+
     logger_.debug("Publisher destructor complete");
 }
 
 template<typename MessageT>
 void Publisher<MessageT>::publish(const MessageT &msg) {
     LogContext context("Publisher::publish()");
+
+    subscribersMutex_.lock();
+    for (auto &sub : subscribers_) {
+        //TODO send message to all subscribers
+    }
+    subscribersMutex_.unlock();
 
     logger_.debug("Exiting publish()");
 }
@@ -89,6 +111,19 @@ std::string Publisher<MessageT>::getTopicName() const {
 template<typename MessageT>
 bool Publisher<MessageT>::status() {
     return core_.status();
+}
+
+template<typename MessageT>
+void Publisher<MessageT>::socketListener() {
+    LogContext context("Publisher::socketListener()");
+    logger_.debug("Spinning socketListener");
+
+    while(status()) {
+        std::this_thread::sleep_for(100ms);
+        //Accept and handle incoming connections
+    }
+
+    logger_.debug("Exiting socketListener");
 }
 
 #endif //MROS_W24_SOLUTION_PUBLISHER_HPP
