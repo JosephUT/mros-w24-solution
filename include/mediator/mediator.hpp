@@ -131,9 +131,9 @@ private:
     std::mutex nodeMutex_;
 
 
-    // bool status() {
-    //     return handler.getStatus();
-    // }
+    bool status() {
+        return handler.getStatus();
+    }
 
     // void createMainSocket();
 

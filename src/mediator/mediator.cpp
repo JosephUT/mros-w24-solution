@@ -70,6 +70,11 @@ void Mediator::spin() {
     LogContext context("Mediator::spin()");
     logger_.info("Spinning SignalHandler Core");
 
+    while(status()) {
+        std::this_thread::sleep_for(100ms);
+    }
+
+    logger_.info("Exiting spin()");
     // startListening();
 }
 
@@ -79,4 +84,12 @@ Mediator::~Mediator() {
 
     // close(server_fd_);
     logger_.debug("Mediator destructor complete");
+}
+
+#include <iostream>
+
+int main(int argc, char** argv) {
+    auto main = std::make_shared<Mediator>(argc, argv);
+    main->spin();
+    return 0;
 }

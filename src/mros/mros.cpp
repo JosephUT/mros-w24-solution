@@ -5,7 +5,7 @@ MROS::MROS() : logger_(Logger::getLogger()), check_logger_(false), status_(true)
 
 MROS::MROS(int argc, char **argv) : logger_(Logger::getLogger()), check_logger_(true), status_(true) {
     logger_.initialize(argc, argv, "MROS");
-    // spin();
+    // registerHandler();
 }
 
 MROS* MROS::mros_ptr_ = nullptr;
@@ -13,7 +13,7 @@ MROS* MROS::mros_ptr_ = nullptr;
 void MROS::init(int argc, char **argv) {
     mros_ptr_ = new MROS(argc, argv);
     // mros_ptr_->logger_.debug("Logger init called");
-    mros_ptr_->spin();
+    mros_ptr_->registerHandler();
 }
 
 MROS &MROS::getMROS() {
@@ -50,7 +50,7 @@ void MROS::deactivateSignal() {
     logger_.debug("Deactivating signal");
 }
 
-void MROS::spin() {
+void MROS::registerHandler() {
     // mros_ptr_ = this;
     std::signal(SIGINT, &MROS::staticHandleSignal);
 }
