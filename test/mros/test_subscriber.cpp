@@ -13,6 +13,7 @@ int main(int argc, char **argv) {
     auto node = std::make_shared<Node>("testSub");
 
     auto sub = node->create_subscriber<Messages::String>("abc", 10, &foo);
+    node->spinOnce();
     node->spin();
     return 0;
 }

@@ -42,15 +42,15 @@ private:
     Logger &logger_;
     MROS &core_;
 
-    // std::vector<std::weak_ptr<SubscriptionBase>> subs_;
-    // std::vector<std::weak_ptr<PublisherBase>> pubs_;
+    std::vector<std::weak_ptr<SubscriberBase>> subs_;
+    std::vector<std::weak_ptr<PublisherBase>> pubs_;
     // std::vector<std::thread> threadPool_;
 };
 
 template<typename MessageT, typename PublisherT>
 std::shared_ptr<PublisherT> Node::create_publisher(std::string topic_name, uint32_t queue_size) {
     auto temp = std::make_shared<PublisherT>(shared_from_this(), std::move(topic_name), queue_size);
-    // pubs_.push_back(temp);
+    pubs_.push_back(temp);
     return temp;
 }
 
@@ -60,7 +60,7 @@ Node::create_subscriber(std::string topic_name, std::uint32_t queue_size, Callba
     std::function<void(MessageT)> callbackFunc(callback);
     auto temp = std::make_shared<SubscriberT>(shared_from_this(), std::move(topic_name),
                                                 queue_size, std::move(callbackFunc));
-    // subs_.push_back(temp);
+    subs_.push_back(temp);
     return temp;
 }
 #endif //MROS_W24_SOLUTION_NODE_HPP
