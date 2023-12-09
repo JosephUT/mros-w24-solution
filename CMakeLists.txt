@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.25)
 project(MROS CXX)
+set(CMAKE_CXX_STANDARD 17)
+
+find_package(nlohmann_json REQUIRED CONFIG)
+find_package(log4cxx CONFIG REQUIRED)
+find_package(EXPAT REQUIRED)
 
 set(SOCKET_SOURCES
         src/socket/bson_socket/bson_socket.cpp
@@ -41,6 +46,7 @@ target_include_directories(mroscore
         PRIVATE
         include
 )
+target_link_libraries(mroscore PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
 
 add_executable(mroskill
         src/command_line/mroskill.cpp
@@ -55,6 +61,7 @@ target_include_directories(mroskill
         PRIVATE
         include
 )
+target_link_libraries(mroskill PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
 
 add_executable(mrosnode
         src/command_line/mrosnode.cpp
@@ -69,6 +76,7 @@ target_include_directories(mrosnode
         PRIVATE
         include
 )
+target_link_libraries(mrosnode PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
 
 add_executable(mrostopic
         src/command_line/mrostopic.cpp
@@ -83,3 +91,4 @@ target_include_directories(mrostopic
         PRIVATE
         include
 )
+target_link_libraries(mrostopic PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
