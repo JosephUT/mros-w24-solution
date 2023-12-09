@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <exception>
+#include <thread>
 #include <nlohmann/json.hpp>
 #include "logging/logging.hpp"
 
@@ -56,6 +57,20 @@ public:
     void spin();
 
 private:
+    void RPCListenerThread();
+
+    void addSubscriber(std::string const &topic_name, std::string const &host, int const port);
+
+    void addPublisher(std::string const &topic_name, std::string const &host, int const port);
+
+    void removeSubscriber(std::string const &topic_name, std::string const &host, int const port);
+
+    void removePublisher(std::string const &topic_name, std::string const &host, int const port);
+
+    void addNode(std::string const &node_name, std::string const &host, int const port);
+
+    void removeNode(std::string const &node_name, std::string const &host, int const port);
+
     std::string address_;
     int port_;
     Logger &logger_;
@@ -122,13 +137,15 @@ private:
 
     };
 
-    std::unordered_map<std::string, std::vector<Topic>> subscriberTable_;   //topic -> vector of topics?
-    std::unordered_map<std::string, std::vector<Topic>> publisherTable_;    //topic -> vector of topics?
-    std::unordered_map<std::string, std::string> nodeTable_;                //name -> URI
+    std::unordered_map<std::string, std::vector<Topic>> subscriberTable_;   //URI -> vector of topics
+    std::unordered_map<std::string, std::vector<Topic>> publisherTable_;    //URI -> vector of topics
+    std::unordered_map<std::string, std::string> nodeTable_;                //URI -> name
 
     std::mutex subMutex_;
     std::mutex pubMutex_;
     std::mutex nodeMutex_;
+
+    std::thread RPCListenerThread_;
 
 
     bool status() {

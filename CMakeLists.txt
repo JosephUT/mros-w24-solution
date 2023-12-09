@@ -29,6 +29,7 @@ add_library(mroslib SHARED
         src/mros/node.cpp
         src/mros/publisher.cpp
         src/mros/subscriber.cpp
+        src/mros/utils/utils.cpp
         ${SOCKET_SOURCES}
 )
 target_include_directories(mroslib PUBLIC
@@ -114,6 +115,7 @@ add_executable(mros_mediator_test
         src/mros/mros.cpp
         src/mediator/mediator.cpp
         test/mediator/test_mediator.cpp
+        src/mros/utils/utils.cpp
         ${SOCKET_SOURCES}
 )
 target_include_directories(mros_mediator_test

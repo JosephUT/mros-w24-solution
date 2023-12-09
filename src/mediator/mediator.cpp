@@ -13,6 +13,7 @@
 #include <errno.h>
 
 #include "logging/logging.hpp"
+#include "mros/utils/utils.hpp"
 
 //---------------------------------------------Mediator Signal Handler--------------------------------------
 
@@ -65,6 +66,8 @@ Mediator::Mediator(int argc, char **argv, std::string address, int port) : addre
 
     // createMainSocket();
 
+    RPCListenerThread_ = std::thread(&Mediator::RPCListenerThread, this);
+
     logger_.debug("Mediator initialized");
 }
 
@@ -84,7 +87,102 @@ Mediator::~Mediator() {
     LogContext context("Mediator::~Mediator");
     logger_.debug("Cleaning up");
 
+    RPCListenerThread_.join();
+    logger_.debug("After RPCListenerThread join");
+
     // close(server_fd_);
     logger_.debug("Mediator destructor complete");
+}
+
+//TODO This is a thread that listens for and responds to incoming RPC calls.
+void Mediator::RPCListenerThread() {
+    LogContext context("Mediator::RPCListenerThread");
+    logger_.debug("Starting RPCListenerThread");
+    while(status()) {
+        std::this_thread::sleep_for(100ms);
+    }
+    logger_.debug("Exiting RPCListenerThread");
+}
+
+//TODO not sure if these are needed in this way
+void Mediator::addSubscriber(std::string const &topic_name, std::string const &host, int const port) {
+    LogContext context("Mediator::addSubscriber");
+    logger_.debug("Adding subscriber to topic " + topic_name + " at " + host + ":" + std::to_string(port));
+
+    subMutex_.lock();
+    // subscriberTable_[toURI(host, port)].emplace_back(topic_name);
+    subMutex_.unlock();
+
+    pubMutex_.lock();
+    //Get publishers
+    pubMutex_.unlock();
+    //TODO send to new subscriber the list of publishers
+}
+
+void Mediator::addPublisher(std::string const &topic_name, std::string const &host, int const port) {
+    LogContext context("Mediator::addPublisher");
+    logger_.debug("Adding publisher to topic " + topic_name + " at " + host + ":" + std::to_string(port));
+
+    pubMutex_.lock();
+    // publisherTable_[toURI(host, port)].emplace_back(topic_name);
+    // std::vector<Topic> publishers = publisherTable_[topic_name];
+    pubMutex_.unlock();
+
+    subMutex_.lock();
+    // std::vector<Topic> subscribers = subscriberTable_[topic_name];
+    subMutex_.unlock();
+
+    // for (auto &subscriber : subscribers) {
+        //TODO send to subscriber the updated list of publishers
+    // }
+}
+
+void Mediator::removeSubscriber(std::string const &topic_name, std::string const &host, int const port) {
+    LogContext context("Mediator::removeSubscriber");
+    logger_.debug("Removing subscriber from topic " + topic_name + " at " + host + ":" + std::to_string(port));
+
+    subMutex_.lock();
+    // subscriberTable_[topic_name].erase(std::remove(subscriberTable_[topic_name].begin(), subscriberTable_[topic_name].end(), toURI(host, port)), subscriberTable_[topic_name].end());
+    subMutex_.unlock();
+
+    // No sending here
+}
+
+void Mediator::removePublisher(std::string const &topic_name, std::string const &host, int const port) {
+    LogContext context("Mediator::removePublisher");
+    logger_.debug("Removing publisher from topic " + topic_name + " at " + host + ":" + std::to_string(port));
+
+    pubMutex_.lock();
+    // publisherTable_[topic_name].erase(std::remove(publisherTable_[topic_name].begin(), publisherTable_[topic_name].end(), toURI(host, port)), publisherTable_[topic_name].end());
+    // std::vector<Topic> publishers = publisherTable_[topic_name];
+    pubMutex_.unlock();
+
+    subMutex_.lock();
+    // std::vector<Topic> subscribers = subscriberTable_[topic_name];
+    subMutex_.unlock();
+
+    // for (auto &subscriber : subscribers) {
+        //TODO send to subscriber the updated list of publishers
+    // }
+}
+
+void Mediator::addNode(std::string const &node_name, std::string const &host, int const port) {
+    LogContext context("Mediator::addNode");
+    logger_.debug("Adding node " + node_name + " at " + host + ":" + std::to_string(port));
+
+    std::lock_guard<std::mutex> lock(nodeMutex_);
+    nodeTable_[toURI(host, port)] = node_name;
+
+    //TODO any calls to be made?
+}
+
+void Mediator::removeNode(std::string const &node_name, std::string const &host, int const port) {
+    LogContext context("Mediator::removeNode");
+    logger_.debug("Removing node " + node_name + " at " + host + ":" + std::to_string(port));
+
+    std::lock_guard<std::mutex> lock(nodeMutex_);
+    nodeTable_.erase(toURI(host, port));
+
+    //TODO any calls to be made?
 }
 
