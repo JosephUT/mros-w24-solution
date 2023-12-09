@@ -81,4 +81,14 @@ void Publisher<MessageT>::publish(const MessageT &msg) {
     logger_.debug("Exiting publish()");
 }
 
+template<typename MessageT>
+std::string Publisher<MessageT>::getTopicName() const {
+    return topic_name_;
+}
+
+template<typename MessageT>
+bool Publisher<MessageT>::status() {
+    return core_.status();
+}
+
 #endif //MROS_W24_SOLUTION_PUBLISHER_HPP

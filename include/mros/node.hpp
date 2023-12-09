@@ -9,7 +9,7 @@
 #include <thread>
 #include <chrono>
 
-// #include "subscriber.hpp"
+#include "mros/subscriber.hpp"
 #include "mros/publisher.hpp"
 #include "logging/logging.hpp"
 #include "mros/mros.hpp"
@@ -23,9 +23,9 @@ public:
 
     ~Node();
 
-    // template<typename MessageT, typename CallbackT = void (*)(MessageT), typename SubscriptionT = Subscription<MessageT>>
-    // std::shared_ptr<SubscriptionT>
-    // create_subscription(std::string topic_name, std::uint32_t queue_size, CallbackT &&callback);
+    template<typename MessageT, typename CallbackT = void (*)(MessageT), typename SubscriberT = Subscriber<MessageT>>
+    std::shared_ptr<SubscriberT>
+    create_subscriber(std::string topic_name, std::uint32_t queue_size, CallbackT &&callback);
 
     template<typename MessageT, typename PublisherT = Publisher<MessageT>>
     std::shared_ptr<PublisherT> create_publisher(std::string topic_name, uint32_t queue_size);
@@ -54,4 +54,13 @@ std::shared_ptr<PublisherT> Node::create_publisher(std::string topic_name, uint3
     return temp;
 }
 
+template<typename MessageT, typename CallbackT, typename SubscriberT>
+std::shared_ptr<SubscriberT>
+Node::create_subscriber(std::string topic_name, std::uint32_t queue_size, CallbackT &&callback) {
+    std::function<void(MessageT)> callbackFunc(callback);
+    auto temp = std::make_shared<SubscriberT>(shared_from_this(), std::move(topic_name),
+                                                queue_size, std::move(callbackFunc));
+    // subs_.push_back(temp);
+    return temp;
+}
 #endif //MROS_W24_SOLUTION_NODE_HPP

@@ -15,19 +15,6 @@ Node::~Node() {
     logger_.debug("Node destructor complete");
 }
 
-// template<typename MessageT, typename CallbackT, typename SubscriptionT>
-// std::shared_ptr<SubscriptionT>
-// Node::create_subscription(std::string topic_name, std::uint32_t queue_size, CallbackT &&callback) {
-//     std::function<void(MessageT)> callbackFunc(callback);
-//     auto temp = std::make_shared<SubscriptionT>(shared_from_this(), std::move(topic_name),
-//                                                 MessageT::messageName(),
-//                                                 queue_size, std::move(callbackFunc));
-//     // subs_.push_back(temp);
-//     return temp;
-// }
-
-
-
 bool Node::status() const {
     return core_.status();
 }

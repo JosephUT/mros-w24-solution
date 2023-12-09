@@ -138,3 +138,18 @@ target_include_directories(mros_pub_test
 target_link_libraries(mros_pub_test PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
 
 
+add_executable(mros_sub_test
+        src/logging/logging.cpp
+        src/mros/node.cpp
+        src/mros/mros.cpp
+        src/mros/subscriber.cpp
+        test/mros/test_subscriber.cpp
+        ${SOCKET_SOURCES}
+)
+target_include_directories(mros_sub_test
+        PRIVATE
+        include
+)
+target_link_libraries(mros_sub_test PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+
+
