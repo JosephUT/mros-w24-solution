@@ -59,6 +59,8 @@ Mediator::Mediator(int argc, char **argv) : Mediator(argc, argv, "127.0.0.1", 13
 Mediator::Mediator(int argc, char **argv, std::string address, int port) : address_(std::move(address)), port_(port),
                                                                            logger_(Logger::getLogger()) {
     logger_.initialize(argc, argv, "Mediator");
+    LogContext context("Mediator::Mediator");
+    logger_.debug("Initializing Mediator");
     handler.registerHandler();
 
     // createMainSocket();
@@ -68,28 +70,21 @@ Mediator::Mediator(int argc, char **argv, std::string address, int port) : addre
 
 void Mediator::spin() {
     LogContext context("Mediator::spin()");
-    logger_.info("Spinning SignalHandler Core");
+    logger_.debug("Spinning SignalHandler Core");
 
     while(status()) {
         std::this_thread::sleep_for(100ms);
     }
 
-    logger_.info("Exiting spin()");
+    logger_.debug("Exiting spin()");
     // startListening();
 }
 
 Mediator::~Mediator() {
-    LogContext context("~Mediator");
+    LogContext context("Mediator::~Mediator");
     logger_.debug("Cleaning up");
 
     // close(server_fd_);
     logger_.debug("Mediator destructor complete");
 }
 
-#include <iostream>
-
-int main(int argc, char** argv) {
-    auto main = std::make_shared<Mediator>(argc, argv);
-    main->spin();
-    return 0;
-}

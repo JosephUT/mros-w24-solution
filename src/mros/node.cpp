@@ -1,15 +1,18 @@
-
 #include "mros/node.hpp"
 
 Node::Node(const std::string &node_name) : logger_(Logger::getLogger()), core_(MROS::getMROS()) {
+    LogContext context("Node::Node");
+    logger_.debug("Initializing Node");
     core_.registerHandler();
+
+    logger_.debug("Node constructor complete");
 }
 
 Node::~Node() {
     LogContext context("~Node");
     logger_.debug("Cleaning up");
 
-    logger_.info("Node destructor complete");
+    logger_.debug("Node destructor complete");
 }
 
 // template<typename MessageT, typename CallbackT, typename SubscriptionT>
@@ -23,13 +26,6 @@ Node::~Node() {
 //     return temp;
 // }
 
-// template<typename MessageT, typename PublisherT>
-// std::shared_ptr<PublisherT> Node::create_publisher(std::string topic_name, uint32_t queue_size) {
-//     auto temp = std::make_shared<PublisherT>(shared_from_this(), std::move(topic_name),
-//                                              queue_size);
-//     // pubs_.push_back(temp);
-//     return temp;
-// }
 
 
 bool Node::status() const {
@@ -38,20 +34,20 @@ bool Node::status() const {
 
 void Node::spin() {
     LogContext context("Node::spin()");
-    logger_.info("spinning");
+    logger_.debug("spinning");
 
     while(status()) {
         std::this_thread::sleep_for(100ms);
     }
 
-    logger_.info("Exiting spin");
+    logger_.debug("Exiting spin");
 }
 
 void Node::spinOnce() {
     LogContext context("Node::spinOnce()");
-    logger_.info("Spinning once");
+    logger_.debug("Spinning once");
 
     std::this_thread::sleep_for(100ms);
 
-    logger_.info("Exiting spinOnce");
+    logger_.debug("Exiting spinOnce");
 }
