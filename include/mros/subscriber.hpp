@@ -37,6 +37,8 @@ class Node;
 template<typename MessageT>
 class Subscriber : public std::enable_shared_from_this<Subscriber<MessageT>>, public SubscriberBase {
 public:
+    friend class Node;
+
     Subscriber() = delete;
 
     ~Subscriber() override;
