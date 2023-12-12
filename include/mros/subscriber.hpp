@@ -41,11 +41,11 @@ public:
 
     ~Subscriber() override;
 
-    Subscriber(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size, std::function<void(MessageT)> callback);
-
     std::string getTopicName() const;
 
 private:
+    Subscriber(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size, std::function<void(MessageT)> callback);
+
     void spin() override;
 
     void spinOnce() override;
