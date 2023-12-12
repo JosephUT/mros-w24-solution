@@ -18,7 +18,7 @@ public:
 
     bool status();
 
-    void spin();
+    void registerHandler();
 
     MROS(MROS const& mr) = delete;
 

@@ -29,6 +29,7 @@ add_library(mroslib SHARED
         src/mros/node.cpp
         src/mros/publisher.cpp
         src/mros/subscriber.cpp
+        src/mros/utils/utils.cpp
         ${SOCKET_SOURCES}
 )
 target_include_directories(mroslib PUBLIC
@@ -36,59 +37,121 @@ target_include_directories(mroslib PUBLIC
         $<INSTALL_INTERFACE:include/mros>
 )
 
-add_executable(mroscore
+# add_executable(mroscore
+#         src/logging/logging.cpp
+#         src/mediator/mediator.cpp
+#         src/mros/mros.cpp
+#         ${SOCKET_SOURCES}
+# )
+# target_include_directories(mroscore
+#         PRIVATE
+#         include
+# )
+# target_link_libraries(mroscore PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+
+# add_executable(mroskill
+#         src/command_line/mroskill.cpp
+#         src/logging/logging.cpp
+#         src/mros/mros.cpp
+#         src/mros/node.cpp
+#         src/mros/publisher.cpp
+#         src/mros/subscriber.cpp
+#         ${SOCKET_SOURCES}
+# )
+# target_include_directories(mroskill
+#         PRIVATE
+#         include
+# )
+# target_link_libraries(mroskill PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+
+# add_executable(mrosnode
+#         src/command_line/mrosnode.cpp
+#         src/logging/logging.cpp
+#         src/mros/mros.cpp
+#         src/mros/node.cpp
+#         src/mros/publisher.cpp
+#         src/mros/subscriber.cpp
+#         ${SOCKET_SOURCES}
+# )
+# target_include_directories(mrosnode
+#         PRIVATE
+#         include
+# )
+# target_link_libraries(mrosnode PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+
+# add_executable(mrostopic
+#         src/command_line/mrostopic.cpp
+#         src/logging/logging.cpp
+#         src/mros/mros.cpp
+#         src/mros/node.cpp
+#         src/mros/publisher.cpp
+#         src/mros/subscriber.cpp
+#         ${SOCKET_SOURCES}
+# )
+# target_include_directories(mrostopic
+#         PRIVATE
+#         include
+# )
+# target_link_libraries(mrostopic PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+
+# -------------------------------------------Tests---------------------------------------
+
+add_executable(mros_node_test
         src/logging/logging.cpp
+        src/mros/node.cpp
+        src/mros/mros.cpp
+        test/mros/test_node.cpp
+        ${SOCKET_SOURCES}
+)
+target_include_directories(mros_node_test
+        PRIVATE
+        include
+)
+target_link_libraries(mros_node_test PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+
+
+add_executable(mros_mediator_test
+        src/logging/logging.cpp
+        src/mros/mros.cpp
         src/mediator/mediator.cpp
-        src/mros/mros.cpp
+        test/mediator/test_mediator.cpp
+        src/mros/utils/utils.cpp
         ${SOCKET_SOURCES}
 )
-target_include_directories(mroscore
+target_include_directories(mros_mediator_test
         PRIVATE
         include
 )
-target_link_libraries(mroscore PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+target_link_libraries(mros_mediator_test PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
 
-add_executable(mroskill
-        src/command_line/mroskill.cpp
-        src/logging/logging.cpp
-        src/mros/mros.cpp
-        src/mros/node.cpp
-        src/mros/publisher.cpp
-        src/mros/subscriber.cpp
-        ${SOCKET_SOURCES}
-)
-target_include_directories(mroskill
-        PRIVATE
-        include
-)
-target_link_libraries(mroskill PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
 
-add_executable(mrosnode
-        src/command_line/mrosnode.cpp
+add_executable(mros_pub_test
         src/logging/logging.cpp
-        src/mros/mros.cpp
         src/mros/node.cpp
+        src/mros/mros.cpp
         src/mros/publisher.cpp
-        src/mros/subscriber.cpp
+        test/mros/test_publisher.cpp
         ${SOCKET_SOURCES}
 )
-target_include_directories(mrosnode
+target_include_directories(mros_pub_test
         PRIVATE
         include
 )
-target_link_libraries(mrosnode PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+target_link_libraries(mros_pub_test PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
 
-add_executable(mrostopic
-        src/command_line/mrostopic.cpp
+
+add_executable(mros_sub_test
         src/logging/logging.cpp
-        src/mros/mros.cpp
         src/mros/node.cpp
-        src/mros/publisher.cpp
+        src/mros/mros.cpp
         src/mros/subscriber.cpp
+        test/mros/test_subscriber.cpp
         ${SOCKET_SOURCES}
 )
-target_include_directories(mrostopic
+target_include_directories(mros_sub_test
         PRIVATE
         include
 )
-target_link_libraries(mrostopic PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+target_link_libraries(mros_sub_test PRIVATE nlohmann_json::nlohmann_json log4cxx EXPAT::EXPAT)
+
+
