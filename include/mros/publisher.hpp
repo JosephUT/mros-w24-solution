@@ -34,13 +34,13 @@ public:
 
     ~Publisher() override;
 
-    Publisher(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size);
-
     void publish(MessageT const &msg);
 
     std::string getTopicName() const;
 
 private:
+    Publisher(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size);
+
     bool status();
 
     void socketListener();
