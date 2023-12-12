@@ -30,6 +30,8 @@ class Node;
 template<typename MessageT>
 class Publisher : public std::enable_shared_from_this<Publisher<MessageT>>, public PublisherBase {
 public:
+    friend class Node;
+
     Publisher() = delete;
 
     ~Publisher() override;
