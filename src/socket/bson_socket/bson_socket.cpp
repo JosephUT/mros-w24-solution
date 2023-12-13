@@ -77,6 +77,7 @@ Bson BsonSocket::receiveMessage() {
       throw SocketErrnoException("Failed to receive from peer.");
     }
     received_string.append(buffer.data(), recv_bytes);
+    recv_so_far += recv_bytes;
   } while (recv_so_far < message_size);
   return {received_string.begin(), received_string.end()};
 }
