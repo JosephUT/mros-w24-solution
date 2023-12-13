@@ -22,7 +22,7 @@ ServerSocket::ServerSocket(const int domain, const std::string &address, const i
   if (setsockopt(file_descriptor_, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) == -1) {
     throw SocketErrnoException("Failed to set socket to reuse address.");
   }
-  if (bind(file_descriptor_, (struct sockaddr *)&server_address_, sizeof(server_address_))) {
+  if (bind(file_descriptor_, reinterpret_cast<struct sockaddr *>(&server_address_), sizeof(server_address_))) {
     throw SocketErrnoException("Failed to bind to port.");
   }
   if (listen(file_descriptor_, listen_backlog)) {
@@ -38,8 +38,9 @@ template <class ConnectionSocket>
 std::optional<std::shared_ptr<ConnectionSocket>> ServerSocket::acceptConnection() {
   if (!is_open_) throw SocketException("Cannot accept on close socket.");
   sockaddr_in client_address = server_address_;  // Must assign to avoid issues with accept
+  socklen_t client_address_size = sizeof(client_address);
   int connection_file_descriptor =
-      accept(file_descriptor_, (struct sockaddr *)&client_address, (socklen_t *)&client_address);
+      accept(file_descriptor_, reinterpret_cast<struct sockaddr *>(&client_address), &client_address_size);
   if (connection_file_descriptor == -1) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       // Return null option if accept fails because backlog is empty.

@@ -183,6 +183,38 @@ target_link_libraries(test_rpc_server
         ${CMAKE_THREAD_LIBS_INIT}
 )
 
+add_executable(test_json_rpc_client
+        ${SOCKET_SOURCES}
+        test_manual/socket/json_rpc_socket/test_json_rpc_client.cpp
+)
+
+target_include_directories(test_json_rpc_client
+        PRIVATE
+        include
+)
+
+target_link_libraries(test_json_rpc_client
+        PRIVATE
+        ${CMAKE_THREAD_LIBS_INIT}
+        nlohmann_json::nlohmann_json
+)
+
+add_executable(test_json_rpc_server
+        ${SOCKET_SOURCES}
+        test_manual/socket/json_rpc_socket/test_json_rpc_server.cpp
+)
+
+target_include_directories(test_json_rpc_server
+        PRIVATE
+        include
+)
+
+target_link_libraries(test_json_rpc_server
+        PRIVATE
+        ${CMAKE_THREAD_LIBS_INIT}
+        nlohmann_json::nlohmann_json
+)
+
 add_executable(mros_node_test
         src/logging/logging.cpp
         src/mros/node.cpp
