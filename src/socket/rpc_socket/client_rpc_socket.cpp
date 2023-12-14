@@ -9,7 +9,7 @@ void ClientRPCSocket::connectToServer(int timeout) {
 }
 
 void ClientRPCSocket::waitForConnectionAndReceive(int timeout) {
-  pollfd poll_set;
+  pollfd poll_set{};
   poll_set.fd = file_descriptor_;
   poll_set.events = POLLIN;   // Event for data to read, in this case should be connection message from peer.
   nfds_t poll_set_count = 1;  // One file descriptor in the poll set.

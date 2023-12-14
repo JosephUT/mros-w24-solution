@@ -8,7 +8,7 @@ JsonClientRPCSocket::JsonClientRPCSocket(int domain, const std::string &server_a
 
 void JsonClientRPCSocket::connectToServer(int timeout) {
   ClientSocket::connect();
-  waitForConnectionAndReceive(timeout)
+  waitForConnectionAndReceive(timeout);
 }
 
 void JsonClientRPCSocket::waitForConnectionAndReceive(int timeout) {

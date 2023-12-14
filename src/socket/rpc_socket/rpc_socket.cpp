@@ -14,7 +14,7 @@ void RPCSocket::close() {
 
     // Wait for peer socket to return closing message.
     std::unique_lock<std::mutex> unique_closing_lock(closing_lock_);
-    closing_condition_variable_.wait(unique_closing_lock, [this] { return this->closing_message_received_; });
+    closing_condition_variable_.wait(unique_closing_lock, [this]() -> bool { return this->closing_message_received_; });
   }
 }
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <string>
 
 #include "socket/rpc_socket/client_rpc_socket.hpp"
 

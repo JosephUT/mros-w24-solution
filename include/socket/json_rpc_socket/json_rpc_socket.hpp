@@ -1,7 +1,7 @@
 #ifndef MROS_W24_SOLUTION_JSON_RPC_SOCKET_HPP
 #define MROS_W24_SOLUTION_JSON_RPC_SOCKET_HPP
 
-#include <socket/message_socket/message_socket.hpp>
+#include <socket/bson_socket/bson_socket.hpp>
 #include <functional>
 #include <atomic>
 #include <mutex>
@@ -13,18 +13,18 @@ using namespace nlohmann;
 /**
  * String holding the name of a callback function to used to determine the appropriate callback to invoke.
  */
-using CallbackName = json;
+using CallbackName = std::string;
 
 /**
  * Function taking a json message from the peer socket and returning nothing. Used for half duplex communication.
  */
-using RequestCallback = std::function<void(json& callback_argument)>;
+using RequestCallbackJson = std::function<void(json& callback_argument)>;
 
 /**
  * Function taking a json message from the peer socket and returning a json message to send back to the peer socket.
  * Used for full duplex communication.
  */
-using RequestResponseCallback = std::function<json(json& callback_argument)>;
+using RequestResponseCallbackJson = std::function<json(json& callback_argument)>;
 
 /**
  * Function taking no arguments and returning nothing, using for handling closing routines that do not communicate.
@@ -35,7 +35,7 @@ using ClosingCallback = std::function<void()>;
  * Abstract mixin class to provide half and full duplex string based RPC to peer sockets, along with no a zero message
  * lose closing routine.
  */
-class JsonRPCSocket : virtual public MessageSocket {
+class JsonRPCSocket : virtual public BsonSocket {
  public:
   /**
    * Constructor setting is_connected to false
@@ -56,14 +56,14 @@ class JsonRPCSocket : virtual public MessageSocket {
    * Check if the socket is connected
    * @return True if the socket is connect, false otherwise.
    */
-  bool connected();
+  bool inline connected();
 
   /**
    * Performs a half duplex RPC to the peer socket, invoking a callback a certain name with a supplied argument.
    * @param callback_name The name of the peer socket's callback to invoke.
    * @param callback_argument The json argument to pass to the peer socket's callback.
    */
-  void sendRequest(CallbackName const& callback_name, json const& callback_argument);
+  void sendRequest(CallbackName const& callback_name, json callback_argument);
 
   /**
    * Performs a full duplex RPC to the peer socket, invoking a callback in the peer socket which in turn invokes a
@@ -72,7 +72,7 @@ class JsonRPCSocket : virtual public MessageSocket {
    * @param callback_argument The json argument to pass to the peer socket's callback.
    * @param response_callback_name The callback of this socket to be invoked with the peer socket's return.
    */
-  void sendRequestAndGetResponse(const CallbackName& callback_name, const json& callback_argument,
+  void sendRequestAndGetResponse(const CallbackName& callback_name, json callback_argument,
                                  const CallbackName& response_callback_name);
 
   /**
@@ -80,14 +80,14 @@ class JsonRPCSocket : virtual public MessageSocket {
    * @param callback_name The name of the callback, used as the key in request_callbacks_.
    * @param callback The callback function, used as the value in request_callbacks_.
    */
-  void registerRequestCallback(const CallbackName& callback_name, const RequestCallback& callback);
+  void registerRequestCallback(const CallbackName& callback_name, const RequestCallbackJson & callback);
 
   /**
    * Adds a request response callback to request_response_callbacks_ that can then be called by the peer socket.
    * @param callback_name The name of the callback, used as the key in request_response_callbacks_.
    * @param callback The callback function, used as the value in request_response_callbacks_.
    */
-  void registerRequestResponseCallback(const CallbackName& callback_name, const RequestResponseCallback& callback);
+  void registerRequestResponseCallback(const CallbackName& callback_name, const RequestResponseCallbackJson & callback);
 
   /**
    * Adds a request callback to request_callbacks_ with key kClosingCallbackName_. This callback will be executed by the
@@ -100,12 +100,12 @@ class JsonRPCSocket : virtual public MessageSocket {
   /**
    * Remove sendMessage() from the public interface. Keep protected for use in this class and subclasses.
    */
-  using MessageSocket::sendMessage;
+  using BsonSocket::sendMessage;
 
   /**
    * Remove receiveMessage() from the public interface. Keep protected for use in this class and subclasses.
    */
-  using MessageSocket::receiveMessage;
+  using BsonSocket::receiveMessage;
 
   /**
    * Run the receive cycle on the receiving thread and detach the receiving thread. Allows derived classes (clients and
@@ -126,12 +126,12 @@ class JsonRPCSocket : virtual public MessageSocket {
   /**
    * Process a request by calling the appropriate callback.
    */
-  void processRequest(const CallbackName& callback_name, std::string& callback_argument);
+  void processRequest(const CallbackName& callback_name, json& callback_argument);
 
   /**
    * Process a request by calling the appropriate callback and sending the return request message.
    */
-  void processRequestResponse(const CallbackName& callback_name, std::string& callback_argument,
+  void processRequestResponse(const CallbackName& callback_name, json& callback_argument,
                               const CallbackName& response_callback_name);
 
   /**
@@ -142,12 +142,12 @@ class JsonRPCSocket : virtual public MessageSocket {
   /**
    * Map for storing request callbacks.
    */
-  std::unordered_map<CallbackName, RequestCallback> request_callbacks_;
+  std::unordered_map<CallbackName, RequestCallbackJson > request_callbacks_;
 
   /**
    * Map for storing request response callbacks.
    */
-  std::unordered_map<CallbackName, RequestResponseCallback> request_response_callbacks_;
+  std::unordered_map<CallbackName, RequestResponseCallbackJson > request_response_callbacks_;
 
   /**
    * Callback to be called if closing_callback_set_ is true when receiving thread receives a closing message.

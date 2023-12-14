@@ -2,12 +2,12 @@
 #define MROS_W24_SOLUTION_CONNECTION_JSON_RPC_SOCKET_HPP
 
 #include <socket/connection_socket.hpp>
-#include <socket/rpc_socket/rpc_socket.hpp>
+#include <socket/json_rpc_socket/json_rpc_socket.hpp>
 
 /**
  * Class combining string RPC functionality with connection socket style initialization.
  */
-class JsonConnectionRPCSocket : virtual public ConnectionSocket, virtual public RPCSocket {
+class JsonConnectionRPCSocket : virtual public ConnectionSocket, virtual public JsonRPCSocket {
  public:
   /**
    * Deleted default constructor.

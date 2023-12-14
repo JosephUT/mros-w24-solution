@@ -20,13 +20,13 @@ void BsonSocket::close() {
   }
 }
 
-void BsonSocket::sendMessage(const Bson &bson) {
+void BsonSocket::sendMessage(const json &json) {
   if (!is_open_) {
     throw SocketException("Cannot send on closed socket.");
   }
-  if (std::find(bson.begin(), bson.end(), kDelimitingCharacter_) != bson.end()) {
-    throw SocketException("Sending message with delimiting character will cause split receive.");
-  }
+//  if (std::find(bson.begin(), bson.end(), kDelimitingCharacter_) != bson.end()) {
+//    throw SocketException("Sending message with delimiting character will cause split receive.");
+//  }
   pollfd poll_set{};
   poll_set.fd = file_descriptor_;
   poll_set.events = POLLRDHUP;  // Event for peer closing on a stream.
@@ -38,6 +38,7 @@ void BsonSocket::sendMessage(const Bson &bson) {
     throw PeerClosedException();
   }
   // Using 2 size method for Bson
+  Bson const bson = json::to_bson(json);
   size_t size_to_complete_send = bson.size();
   ssize_t send_size = 0;
   if (send(file_descriptor_, &size_to_complete_send, sizeof(size_t), 0) == -1) {
@@ -53,31 +54,28 @@ void BsonSocket::sendMessage(const Bson &bson) {
   } while (size_to_complete_send > 0);
 }
 
-Bson BsonSocket::receiveMessage() {
+json BsonSocket::receiveMessage() {
   if (!is_open_) {
     if (!is_open_) throw SocketException("Cannot receive on closed socket.");
   }
   std::array<std::uint8_t, kReceiveBufferSize_> buffer{};
-  BsonString received_string;
   // BsonString received_message;
-
-  ssize_t recv_bytes = 0;
   ssize_t recv_so_far = 0;
   size_t message_size = 0;
   if (recv(file_descriptor_, &message_size, sizeof(size_t), 0) == -1) {
     if (!is_open_) throw SocketErrnoException("Failed to receive from peer.");
   }
-  received_string.reserve(message_size + 1);  // adding 1 for a delimiter just in case
+  std::vector<std::uint8_t> message(message_size);
   do {
-    recv_bytes = recv(file_descriptor_, buffer.data(), buffer.size(), 0);
+    ssize_t recv_bytes = recv(file_descriptor_, buffer.data(), buffer.size(), 0);
     if (recv_bytes == 0) {
       throw PeerClosedException();
     }
     if (recv_bytes == -1) {
       throw SocketErrnoException("Failed to receive from peer.");
     }
-    received_string.append(buffer.data(), recv_bytes);
+    message.insert(message.begin() + recv_so_far, buffer.begin(), buffer.begin() + recv_bytes);
     recv_so_far += recv_bytes;
   } while (recv_so_far < message_size);
-  return {received_string.begin(), received_string.end()};
+  return json::from_bson(message.begin(), message.end());
 }
