@@ -56,7 +56,7 @@ class BsonSocket : virtual public Socket {
    */
   virtual void close();
  protected:
-  std::atomic_bool is_open_;
+  std::atomic_bool is_open_ = true;
  private:
   //std::queue<BsonString> message_queue_;
 

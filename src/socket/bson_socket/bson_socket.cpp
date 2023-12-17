@@ -6,6 +6,7 @@
 #include <array>
 #include <socket/bson_socket/bson_socket.hpp>
 
+
 BsonSocket::~BsonSocket() {
   if (is_open_) {
     int result = ::close(file_descriptor_);
@@ -38,6 +39,7 @@ void BsonSocket::sendMessage(const json &json) {
     throw PeerClosedException();
   }
   // Using 2 size method for Bson
+
   Bson const bson = json::to_bson(json);
   size_t size_to_complete_send = bson.size();
   ssize_t send_size = 0;

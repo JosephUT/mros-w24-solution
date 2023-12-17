@@ -1,5 +1,6 @@
 #include <socket/json_rpc_socket/json_rpc_socket.hpp>
 
+
 JsonRPCSocket::JsonRPCSocket() : is_connected_(false) {}
 
 JsonRPCSocket::~JsonRPCSocket() = default;
@@ -22,7 +23,7 @@ void JsonRPCSocket::sendRequest(const CallbackName& callback_name, nlohmann::jso
   callback_argument["callback name"] = callback_name;
   std::lock_guard<std::mutex> sendingLockGuard(sending_lock_);
   try {
-    sendMessage(callback_argument);
+    BsonSocket::sendMessage(callback_argument);
   } catch (PeerClosedException& error) {
   } catch (SocketException& error) {
   }
@@ -32,10 +33,9 @@ void JsonRPCSocket::sendRequestAndGetResponse(const CallbackName& callback_name,
                                               const CallbackName& response_callback_name) {
   callback_argument["callback name"] = callback_name;
   callback_argument["response callback name"] = response_callback_name;
-  Bson message = json::to_bson(callback_argument);
   std::lock_guard<std::mutex> sending_lock_guard(sending_lock_);
   try {
-    sendMessage(message);
+    sendMessage(callback_argument);
   } catch (PeerClosedException& error) {
   } catch (SocketException& error) {
   }
