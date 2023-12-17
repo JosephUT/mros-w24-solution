@@ -20,7 +20,7 @@ int main() {
   std::string const kServerAddress = "127.0.0.1";
   int const kServerPort = 13348;
 
-  auto client_sock = std::make_shared<JsonClientRPCSocket>(kDomain, kServerAddress, kServerPort);
+  auto client_sock = std::make_shared<ClientJsonRPCSocket>(kDomain, kServerAddress, kServerPort);
   client_sock->registerRequestCallback("printMessage", &printMessage);
   client_sock->registerRequestResponseCallback("echo", &echo);
 
@@ -31,6 +31,6 @@ int main() {
     } catch (SocketException const& e) {}
   }
 
-  while (client_sock->connected());
+  while (client_sock->connected()) {}
   return 0;
 }

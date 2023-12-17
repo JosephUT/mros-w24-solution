@@ -4,7 +4,7 @@
 #include <socket/client_socket.hpp>
 #include <socket/bson_socket/bson_socket.hpp>
 
-class BsonClientMessageSocket : virtual public ClientSocket, virtual public BsonSocket {
+class ClientBsonMessageSocket : virtual public ClientSocket, virtual public BsonSocket {
  public:
   /**
    * Initialize socket with information of server socket it will connect to.
@@ -13,11 +13,11 @@ class BsonClientMessageSocket : virtual public ClientSocket, virtual public Bson
    * @param port The port number of the server.
    * @throws SocketException Throw exception if socket() call fails.
    */
-  BsonClientMessageSocket(int domain, std::string const& server_address, int port);
+  ClientBsonMessageSocket(int domain, std::string const& server_address, int port);
 
   /**
    * Default destructor to allow for concrete class.
    */
-  ~BsonClientMessageSocket() override = default;
+  ~ClientBsonMessageSocket() override = default;
 };
 #endif //MROS_W24_SOLUTION_CLIENT_BSON_SOCKET_HPP

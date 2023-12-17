@@ -33,4 +33,5 @@ int main() {
 
   // Wait for connection socket to call .close().
   while (client_socket->connected()) {}
+  return 0;
 }

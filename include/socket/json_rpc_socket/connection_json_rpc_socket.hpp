@@ -7,23 +7,23 @@
 /**
  * Class combining string RPC functionality with connection socket style initialization.
  */
-class JsonConnectionRPCSocket : virtual public ConnectionSocket, virtual public JsonRPCSocket {
+class ConnectionJsonRPCSocket : virtual public ConnectionSocket, virtual public JsonRPCSocket {
  public:
   /**
    * Deleted default constructor.
    */
-  JsonConnectionRPCSocket() = delete;
+  ConnectionJsonRPCSocket() = delete;
 
   /**
    * Constructor taking a file descriptor to be called internally to acceptConnection() in ServerSockets.
    * @param file_descriptor The file descriptor to initialize the connection socket with.
    */
-  explicit JsonConnectionRPCSocket(int file_descriptor);
+  explicit ConnectionJsonRPCSocket(int file_descriptor);
 
   /**
    * Close the socket file descriptor.
    */
-  ~JsonConnectionRPCSocket() override = default;
+  ~ConnectionJsonRPCSocket() override = default;
 
   /**
    * Send the connecting message to the client socket to unblock it's connect() call.

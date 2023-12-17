@@ -3,15 +3,15 @@
 
 using namespace nlohmann;
 
-JsonClientRPCSocket::JsonClientRPCSocket(int domain, const std::string &server_address, int port)
+ClientJsonRPCSocket::ClientJsonRPCSocket(int domain, const std::string &server_address, int port)
     : ClientSocket(domain, server_address, port) {}
 
-void JsonClientRPCSocket::connectToServer(int timeout) {
+void ClientJsonRPCSocket::connectToServer(int timeout) {
   ClientSocket::connect();
   waitForConnectionAndReceive(timeout);
 }
 
-void JsonClientRPCSocket::waitForConnectionAndReceive(int timeout) {
+void ClientJsonRPCSocket::waitForConnectionAndReceive(int timeout) {
   pollfd poll_set{};
   poll_set.fd = file_descriptor_;
   poll_set.events = POLLIN;   // Event for data to read, in this case should be connection message from peer.

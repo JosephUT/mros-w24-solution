@@ -7,7 +7,7 @@
 /**
  * Class combining string rpc functionality with client style socket initialization.
  */
-class JsonClientRPCSocket : virtual public ClientSocket, virtual public RPCSocket {
+class ClientJsonRPCSocket : virtual public ClientSocket, virtual public RPCSocket {
  public:
   /**
    * Initialize socket with information of server socket it will connect to.
@@ -16,12 +16,12 @@ class JsonClientRPCSocket : virtual public ClientSocket, virtual public RPCSocke
    * @param port The port number of the server.
    * @throws SocketException Throw exception if socket() call fails.
    */
-  JsonClientRPCSocket(int domain, const std::string& server_address, int port);
+  ClientJsonRPCSocket(int domain, const std::string& server_address, int port);
 
   /**
    * Default destructor to allow for concrete class.
    */
-  ~JsonClientRPCSocket() override = default;
+  ~ClientJsonRPCSocket() override = default;
 
   /**
    * Connects to the server socket. Waits indefinitely for the resulting connection socket to

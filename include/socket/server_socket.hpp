@@ -15,6 +15,8 @@
 #include <socket/connection_socket.hpp>
 #include <socket/message_socket/connection_message_socket.hpp>
 #include <socket/rpc_socket/connection_rpc_socket.hpp>
+#include <socket/bson_socket/connection_bson_socket.hpp>
+#include <socket/json_rpc_socket/connection_json_rpc_socket.hpp>
 #include <socket/socket.hpp>
 #include <socket/utils/socket_exception.hpp>
 #include <string>
