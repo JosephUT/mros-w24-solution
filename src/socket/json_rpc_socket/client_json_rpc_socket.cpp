@@ -1,5 +1,6 @@
 #include <socket/json_rpc_socket/client_json_rpc_socket.hpp>
 #include <nlohmann/json.hpp>
+#include <poll.h>
 
 using namespace nlohmann;
 
@@ -21,7 +22,7 @@ void ClientJsonRPCSocket::waitForConnectionAndReceive(int timeout) {
     // Read out connection message from peer once available, then start receiving thread.
     json connection_message = receiveMessage();
     is_connected_ = true;
-    RPCSocket::startReceiveCycle();
+    ClientJsonRPCSocket::startReceiveCycle();
   } else {
     throw SocketException("Timed out waiting for connection message");
   }

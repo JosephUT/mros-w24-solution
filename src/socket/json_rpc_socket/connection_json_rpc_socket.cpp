@@ -6,6 +6,6 @@ ConnectionJsonRPCSocket::ConnectionJsonRPCSocket(int file_descriptor) : Connecti
 }
 
 void ConnectionJsonRPCSocket::startConnection() {
-  sendMessage({{"c", "c"}});
+  sendMessage({{"connect", "c"}});
   startReceiveCycle();
 }

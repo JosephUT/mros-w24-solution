@@ -2,12 +2,12 @@
 #define MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP
 
 #include <socket/client_socket.hpp>
-#include <socket/rpc_socket/rpc_socket.hpp>
+#include <socket/json_rpc_socket/json_rpc_socket.hpp>
 // TODO: Change from Message Socket
 /**
  * Class combining string rpc functionality with client style socket initialization.
  */
-class ClientJsonRPCSocket : virtual public ClientSocket, virtual public RPCSocket {
+class ClientJsonRPCSocket : virtual public ClientSocket, virtual public JsonRPCSocket {
  public:
   /**
    * Initialize socket with information of server socket it will connect to.

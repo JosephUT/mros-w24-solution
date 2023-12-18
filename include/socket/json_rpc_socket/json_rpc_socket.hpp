@@ -56,7 +56,7 @@ class JsonRPCSocket : virtual public BsonSocket {
    * Check if the socket is connected
    * @return True if the socket is connect, false otherwise.
    */
-  bool inline connected();
+  bool connected();
 
   /**
    * Performs a half duplex RPC to the peer socket, invoking a callback a certain name with a supplied argument.

@@ -16,7 +16,7 @@ ClientSocket::ClientSocket(int domain, const std::string &server_address, int po
 ClientSocket::~ClientSocket() {}
 
 void ClientSocket::connect() {
-  if (::connect(file_descriptor_, (struct sockaddr *)&server_address_, sizeof(server_address_))) {
+  if (::connect(file_descriptor_, reinterpret_cast<struct sockaddr *>(&server_address_), sizeof(server_address_))) {
     throw SocketException("Failed to connect to server.");
   }
 }

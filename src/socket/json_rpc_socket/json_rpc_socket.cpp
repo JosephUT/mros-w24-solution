@@ -74,9 +74,6 @@ void JsonRPCSocket::receiveCycle() {
     auto closing_message_iter = received_message.find("close");
     auto callback_name_iter = received_message.find("callback name");
     auto request_response_callback_iter = received_message.find("response callback name");
-    if (callback_name_iter == received_message.end()) {
-      throw std::logic_error("No callback name specified");
-    }
     if (closing_message_iter != received_message.end() || received_message.empty()) {
       sending_lock_.lock();
       if (is_connected_) {
@@ -104,10 +101,12 @@ void JsonRPCSocket::receiveCycle() {
       received_message.erase(callback_name_iter);
       received_message.erase(request_response_callback_iter);
       processRequestResponse(callback_name, received_message, response_callback_name);
-    } else {
+    } else if (callback_name_iter != received_message.end()) {
       std::string const callback_name = callback_name_iter->get<std::string>();
       received_message.erase(callback_name_iter);
       processRequest(callback_name, received_message);
+    } else {
+        throw std::logic_error("No callback name specified");
     }
     received_message.clear();
   }
@@ -115,10 +114,9 @@ void JsonRPCSocket::receiveCycle() {
 
 void JsonRPCSocket::processRequest(const CallbackName& callback_name, json& callback_argument) {
   std::lock_guard<std::mutex> lock_guard(request_response_callbacks_lock_);
-  auto request_response_callback_iterator = request_response_callbacks_.find(callback_name);
-  if (request_response_callback_iterator != request_response_callbacks_.end()) {
-    json callback_result = request_response_callback_iterator->second(callback_argument);
-    sendRequest(callback_name, callback_result);
+  auto request_callback_iterator = request_callbacks_.find(callback_name);
+  if (request_callback_iterator != request_callbacks_.end()) {
+    request_callback_iterator->second(callback_argument);
   }
 }
 

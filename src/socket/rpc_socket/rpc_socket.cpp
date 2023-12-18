@@ -89,7 +89,7 @@ void RPCSocket::receiveCycle() {
       sending_lock_.lock();
       if (is_connected_) {
         is_connected_ = false;
-        sendClosingMessage();
+        RPCSocket::sendClosingMessage();
       }
       MessageSocket::close();
       sending_lock_.unlock();
