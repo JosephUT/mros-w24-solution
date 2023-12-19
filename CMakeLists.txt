@@ -173,6 +173,7 @@ target_link_libraries(test_rpc_client
 add_executable(test_rpc_server
         ${SOCKET_SOURCES}
         test_manual/socket/rpc_socket/test_rpc_server.cpp
+        src/logging/logging.cpp
 )
 target_include_directories(test_rpc_server
         PRIVATE
@@ -186,6 +187,7 @@ target_link_libraries(test_rpc_server
 add_executable(test_json_rpc_client
         ${SOCKET_SOURCES}
         test_manual/socket/json_rpc_socket/test_json_rpc_client.cpp
+        src/logging/logging.cpp
 )
 
 target_include_directories(test_json_rpc_client
@@ -197,11 +199,14 @@ target_link_libraries(test_json_rpc_client
         PRIVATE
         ${CMAKE_THREAD_LIBS_INIT}
         nlohmann_json::nlohmann_json
+        log4cxx
+        EXPAT::EXPAT
 )
 
 add_executable(test_json_rpc_server
         ${SOCKET_SOURCES}
         test_manual/socket/json_rpc_socket/test_json_rpc_server.cpp
+        src/logging/logging.cpp
 )
 
 target_include_directories(test_json_rpc_server
@@ -213,6 +218,8 @@ target_link_libraries(test_json_rpc_server
         PRIVATE
         ${CMAKE_THREAD_LIBS_INIT}
         nlohmann_json::nlohmann_json
+        log4cxx
+        EXPAT::EXPAT
 )
 
 add_executable(mros_node_test
@@ -251,6 +258,23 @@ target_link_libraries(mros_mediator_test
         log4cxx
         EXPAT::EXPAT
 )
+
+add_executable(test_logger
+        test_manual/logger/test_logger.cpp
+        src/logging/logging.cpp
+)
+
+target_include_directories(test_logger
+        PRIVATE
+        include
+)
+
+target_link_libraries(test_logger
+        PRIVATE
+        log4cxx
+        EXPAT::EXPAT
+)
+
 
 #add_executable(mros_pub_test
 #        src/logging/logging.cpp

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <socket/bson_socket/bson_socket.hpp>
+#include <sstream>
 
 
 BsonSocket::~BsonSocket() {
@@ -57,6 +58,7 @@ void BsonSocket::sendMessage(const json &json) {
 }
 
 json BsonSocket::receiveMessage() {
+    LogContext context("Bson receiver");
     if (!is_open_) {
         if (!is_open_) throw SocketException("Cannot receive on closed socket.");
     }
@@ -79,6 +81,9 @@ json BsonSocket::receiveMessage() {
         message.append(buffer.data(), recv_bytes);
         recv_so_far += recv_bytes;
     } while (recv_so_far < message_size);
-    auto msg = json::from_bson(message.begin(), message.end());
+    logger_.debug("Attempting to deserialize");
+    json msg = json::from_bson(message.begin(), message.end());
+    message.clear();
+    logger_.debug("Received message: " + msg.dump());
     return msg;
 }

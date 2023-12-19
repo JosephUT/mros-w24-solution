@@ -1,6 +1,7 @@
 #ifndef MROS_W24_SOLUTION_SOCKET_HPP
 #define MROS_W24_SOLUTION_SOCKET_HPP
 
+#include <logging/logging.hpp>
 /**
  * Abstract base class for socket.
  */
@@ -9,7 +10,7 @@ class Socket {
   /**
    * Default constructor.
    */
-  Socket() = default;
+  Socket();
 
   /**
    * Private constructor to be called by connection sockets.
@@ -25,6 +26,8 @@ class Socket {
    * File descriptor for the socket.
    */
   int file_descriptor_;
+
+  Logger& logger_;
 };
 
 #endif  // MROS_W24_SOLUTION_SOCKET_HPP
