@@ -105,29 +105,6 @@ json BsonSocket::receiveMessage() {
     return json::from_bson(received_bson_message.begin(), received_bson_message.end());
 }
 
-=======
-if (!message_queue_.
-
-empty() &&
-
-back_is_delimiter) {
-back_is_complete_message_ = true;
-} else {
-back_is_complete_message_ = false;
-}
-} // else
-return
-json::from_bson(received_bson_message
-.
-
-begin(), received_bson_message
-
-.
-
-end()
-
-);
-}
 
 //void BsonSocket::sendMessage(const json &json) {
 //    if (!is_open_) {
@@ -195,5 +172,3 @@ end()
 //    logger_.debug("Received message: " + msg.dump());
 //    return msg;
 //}
->>>>>>>
-Stashed changes
