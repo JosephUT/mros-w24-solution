@@ -13,11 +13,13 @@ static std::string echoAndEmphasize(const std::string& input) {
   return input + '!';
 }
 
-int main() {
+int main(int argc, char** argv) {
   const int kDomain = AF_INET;
   const std::string kServerAddress = "127.0.0.1";
   const int kServerPort = 13347;
   std::string input;
+  Logger& logger = Logger::getLogger();
+  logger.initialize(argc, argv, "String RPC Client");
 
   auto client_socket = std::make_shared<ClientRPCSocket>(kDomain, kServerAddress, kServerPort);
   client_socket->registerRequestCallback("printMessage", printMessage);

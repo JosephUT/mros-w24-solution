@@ -160,6 +160,7 @@ gtest_discover_tests(test_message_socket)
 add_executable(test_rpc_client
         ${SOCKET_SOURCES}
         test_manual/socket/rpc_socket/test_rpc_client.cpp
+        src/logging/logging.cpp
 )
 target_include_directories(test_rpc_client
         PRIVATE
@@ -168,6 +169,8 @@ target_include_directories(test_rpc_client
 target_link_libraries(test_rpc_client
         PRIVATE
         ${CMAKE_THREAD_LIBS_INIT}
+        EXPAT::EXPAT
+        log4cxx
 )
 
 add_executable(test_rpc_server
@@ -182,6 +185,8 @@ target_include_directories(test_rpc_server
 target_link_libraries(test_rpc_server
         PRIVATE
         ${CMAKE_THREAD_LIBS_INIT}
+        EXPAT::EXPAT
+        log4cxx
 )
 
 add_executable(test_json_rpc_client

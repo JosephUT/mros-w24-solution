@@ -204,7 +204,7 @@ class JsonRPCSocket : virtual public BsonSocket {
    * Variable for delimiting the parameters for callbacks within messages. One of these characters is sent as the
    * closing message.
    */
-  static constexpr const char kParameterDelimiter_ = '%';
+  static constexpr const std::uint8_t kParameterDelimiter_ = '%';
 };
 
 #endif //MROS_W24_SOLUTION_JSON_RPC_SOCKET_HPP

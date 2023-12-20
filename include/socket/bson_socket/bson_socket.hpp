@@ -32,14 +32,14 @@ class BsonSocket : virtual public Socket {
   ~BsonSocket() override = 0;
 
   /**
-   * Send a bson message in completion by calling send() until all bytes are sent.
-   * @param bson The bson message to send.
+   * Send a message message in completion by calling send() until all bytes are sent.
+   * @param message The message message to send.
    * @throws SocketException Throws exception on failure of send() or if this socket is closed, or if message contains a
    * delimiting character.
    * @throws PeerClosedException Throws exception if peer has closed. Users may catch and instantiate a closing
    * sequence.
    */
-  void sendMessage(json const& bson);
+  void sendMessage(json const& message);
 
   /**
    * Receive a Bson message, current impl does not fill the message queue
@@ -58,13 +58,13 @@ class BsonSocket : virtual public Socket {
  protected:
   std::atomic_bool is_open_ = true;
  private:
-  //std::queue<BsonString> message_queue_;
+  std::queue<BsonString> message_queue_;
 
-  //bool back_is_complete_message_ = false;
+  bool back_is_complete_message_ = false;
 
   static int constexpr const kReceiveBufferSize_ = 4;
 
-  static std::uint8_t constexpr const kDelimitingCharacter_ = '\n';
+  static std::uint8_t constexpr const kDelimitingCharacter_ = '$';
 };
 
 #endif //MROS_W24_SOLUTION_BSON_SOCKET_HPP

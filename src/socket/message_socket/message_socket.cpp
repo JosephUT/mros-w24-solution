@@ -13,7 +13,7 @@ void MessageSocket::sendMessage(std::string message) {
   if (message.find(kDelimitingCharacter_) != std::string::npos)
     throw SocketException("Sending message with delimiting character will cause split receive.");
 
-  pollfd poll_set;
+  pollfd poll_set{};
   poll_set.fd = file_descriptor_;
   poll_set.events = POLLRDHUP;  // Event for peer closing on a stream.
   nfds_t poll_set_count = 1;    // One file descriptor in the poll set.
@@ -52,7 +52,7 @@ std::string MessageSocket::receiveMessage() {
   } else {
     // Call recv() until at least one delimiting character is received or an error is returned.
     do {
-      received_size = recv(file_descriptor_, (void *)receive_buffer, sizeof(receive_buffer), 0);
+      received_size = recv(file_descriptor_, reinterpret_cast<void*>(receive_buffer), sizeof(receive_buffer), 0);
       if (received_size == 0) {
         throw PeerClosedException();
       } else if (received_size == -1) {
