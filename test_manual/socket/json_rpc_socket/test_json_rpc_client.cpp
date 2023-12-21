@@ -33,7 +33,9 @@ int main(int argc, char** argv) {
         try {
             client_sock->connectToServer();
             break;
-        } catch (SocketException const &e) {}
+        } catch (SocketException const &e) {
+            logger.debug(e.what());
+        }
     }
 
     while (client_sock->connected()) {}

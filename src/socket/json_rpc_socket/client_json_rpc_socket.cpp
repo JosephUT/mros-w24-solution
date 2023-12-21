@@ -21,6 +21,7 @@ void ClientJsonRPCSocket::waitForConnectionAndReceive(int timeout) {
   if (poll_result == 1) {
     // Read out connection message from peer once available, then start receiving thread.
     json connection_message = receiveMessage();
+    logger_.debug("Connection message received");
     is_connected_ = true;
     ClientJsonRPCSocket::startReceiveCycle();
   } else {

@@ -19,21 +19,26 @@ void JsonRPCSocket::close() {
 
 bool JsonRPCSocket::connected() { return is_connected_; }
 
-void JsonRPCSocket::sendRequest(const CallbackName &callback_name, nlohmann::json callback_argument) {
+void JsonRPCSocket::sendRequest(CallbackName const &callback_name, json const &callback_argument) {
+    json to_send = {{"callback name", callback_name},
+                    {"message",       callback_argument}};
     std::lock_guard<std::mutex> sendingLockGuard(sending_lock_);
     try {
-        BsonSocket::sendMessage(callback_argument);
+        BsonSocket::sendMessage(to_send);
     } catch (PeerClosedException &error) {
     } catch (SocketException &error) {
     }
 }
 
-void JsonRPCSocket::sendRequestAndGetResponse(const CallbackName &callback_name, nlohmann::json callback_argument,
-                                              const CallbackName &response_callback_name) {
-
+void JsonRPCSocket::sendRequestAndGetResponse(CallbackName const &callback_name, json const &callback_argument,
+                                              CallbackName const &response_callback_name) {
+    json to_send = {{"callback name",          callback_name},
+                    {"response callback name", response_callback_name},
+                    {"message",                callback_argument}};
     std::lock_guard<std::mutex> sending_lock_guard(sending_lock_);
     try {
-        sendMessage(callback_argument);
+        sendMessage(to_send);
+        // Received on the recv cycle
     } catch (PeerClosedException &error) {
     } catch (SocketException &error) {
     }
@@ -42,12 +47,14 @@ void JsonRPCSocket::sendRequestAndGetResponse(const CallbackName &callback_name,
 void JsonRPCSocket::registerRequestCallback(const CallbackName &callback_name, const RequestCallbackJson &callback) {
     std::lock_guard<std::mutex> request_lock_guard(request_callbacks_lock_);
     request_callbacks_[callback_name] = callback;
+    logger_.debug("rcb registered with name: " + callback_name);
 }
 
 void JsonRPCSocket::registerRequestResponseCallback(const CallbackName &callback_name,
                                                     const RequestResponseCallbackJson &callback) {
     std::lock_guard<std::mutex> request_response_lock_guard(request_response_callbacks_lock_);
     request_response_callbacks_[callback_name] = callback;
+    logger_.debug("rrcb registered with name: " + callback_name);
 }
 
 void JsonRPCSocket::registerClosingCallback(const ClosingCallback &callback) {
@@ -62,20 +69,19 @@ void JsonRPCSocket::startReceiveCycle() {
 }
 
 void JsonRPCSocket::receiveCycle() {
-    std::vector<BsonString> message_parameters;
-    BsonString message_parameter;
-    BsonString received_bson_message;
+    json received_message;
     while (true) {
         try {
-            received_bson_message = receiveMessage();
+            received_message = receiveMessage();
         } catch (PeerClosedException &error) {
         } catch (SocketException &error) {
         }
-        std::basic_istringstream<std::uint8_t> message_stream(received_bson_message);
-        while (std::getline(message_stream, message_parameter, kParameterDelimiter_)) {
-            message_parameters.push_back(message_parameter);
-        }
-        if (message_parameters.size() == 1 || received_bson_message.empty()) {
+        logger_.debug("Received message: " + received_message.dump());
+        auto closing_message_iter = received_message.find("close");
+        auto callback_name_iter = received_message.find("callback name");
+        auto request_response_callback_iter = received_message.find("response callback name");
+        if (closing_message_iter != received_message.end() || received_message.empty() ||
+            received_message.is_discarded()) {
             sending_lock_.lock();
             if (is_connected_) {
                 is_connected_.store(false);
@@ -96,41 +102,37 @@ void JsonRPCSocket::receiveCycle() {
             unique_closing_lock.unlock();
             closing_condition_variable_.notify_all();
             break;
-        } else if (message_parameters.size() == 2) {
-            std::string const callback_name(message_parameters[0].begin(), message_parameters[0].end());
-            json callback_argument = json::from_bson(message_parameters[1].begin(), message_parameters[1].end());
-            processRequest(callback_name, callback_argument);
-        } else if (message_parameters.size() == 3) {
-            std::string const callback_name(message_parameters[0].begin(), message_parameters[0].end());
-            json callback_argument = json::from_bson(message_parameters[1].begin(), message_parameters[1].end());
-            std::string const response_callback_name(message_parameters[2].begin(), message_parameters[2].end());
-            processRequestResponse(callback_name, callback_argument, response_callback_name);
+        } else if (request_response_callback_iter != received_message.end()) {
+            processRequestResponse(received_message);
+        } else if (callback_name_iter != received_message.end()) {
+            processRequest(received_message);
         }
-        message_parameters.clear();
-        received_bson_message.clear();
+        received_message.clear();
     }
 }
 
-void JsonRPCSocket::processRequest(const CallbackName &callback_name, json &callback_argument) {
-    std::lock_guard<std::mutex> lock_guard(request_response_callbacks_lock_);
+void JsonRPCSocket::processRequest(json const &callback_argument) {
+    std::lock_guard<std::mutex> lock_guard(request_callbacks_lock_);
+    std::string callback_name = callback_argument["callback name"].get<std::string>();
     auto request_callback_iterator = request_callbacks_.find(callback_name);
     if (request_callback_iterator != request_callbacks_.end()) {
-        request_callback_iterator->second(callback_argument);
+        request_callback_iterator->second(callback_argument["message"]);
+    } else {
+        logger_.debug("callback name " + callback_name + " not found");
     }
 }
 
-void JsonRPCSocket::processRequestResponse(const CallbackName &callback_name, nlohmann::json &callback_argument,
-                                           const CallbackName &response_callback_name) {
+void JsonRPCSocket::processRequestResponse(nlohmann::json const &callback_argument) {
     LogContext context("processRequestResponse");
     std::lock_guard<std::mutex> lock_guard(request_response_callbacks_lock_);
+    std::string const response_callback_name = callback_argument["response callback name"].get<std::string>();
+    std::string const callback_name = callback_argument["callback name"].get<std::string>();
     auto request_response_callback_iter = request_response_callbacks_.find(callback_name);
     if (request_response_callback_iter != request_response_callbacks_.end()) {
-        logger_.debug("Request Response callback found");
-        std::function<json(json &)> jsonFunc = request_response_callback_iter->second;
-        logger_.debug("Callback successfully called");
-        json callback_result = jsonFunc(callback_argument);
-        logger_.debug("Callback result: " + callback_result.dump());
+        json callback_result = request_response_callback_iter->second(callback_argument["message"]);
         sendRequest(response_callback_name, callback_result);
+    } else {
+        logger_.debug("response callback name " + callback_name + " not found");
     }
 }
 
@@ -143,59 +145,3 @@ void JsonRPCSocket::sendClosingMessage() {
     }
 }
 
-//void JsonRPCSocket::receiveCycle() {
-//    LogContext logContext("receiveCycle");
-//    json received_message;
-//    while (true) {
-//        try {
-//            received_message = receiveMessage();
-//        } catch (PeerClosedException &error) {
-//        } catch (SocketException &error) {
-//        }
-//        auto closing_message_iter = received_message.find("close");
-//        auto callback_name_iter = received_message.find("callback name");
-//        auto request_response_callback_iter = received_message.find("response callback name");
-//        if (closing_message_iter != received_message.end() || received_message.empty()) {
-//            sending_lock_.lock();
-//            if (is_connected_) {
-//                is_connected_.store(false);
-//                sendClosingMessage();
-//            }
-//            BsonSocket::close();
-//            sending_lock_.unlock();
-//
-//            // exit closing callback if one is registered;
-//            closing_callback_lock_.lock();
-//            if (closing_callback_set_) {
-//                closing_callback_();
-//            }
-//            closing_callback_lock_.unlock();
-//
-//            std::unique_lock<std::mutex> unique_closing_lock(closing_lock_);
-//            closing_message_received_ = true;
-//            unique_closing_lock.unlock();
-//            closing_condition_variable_.notify_all();
-//            break;
-//        } else if (request_response_callback_iter != received_message.end()) {
-//            LogContext context("request response getter");
-//            logger_.debug("Attemtping request response getters");
-//            std::string const callback_name = callback_name_iter->get<std::string>();
-//            logger_.debug("Got callback name " + callback_name);
-//            std::string const response_callback_name = request_response_callback_iter->get<std::string>();
-//            logger_.debug("Got response callback name " + response_callback_name);
-//            received_message.erase(callback_name_iter);
-//            received_message.erase(request_response_callback_iter);
-//            processRequestResponse(callback_name, received_message, response_callback_name);
-//        } else if (callback_name_iter != received_message.end()) {
-//            LogContext context("request getter");
-//            logger_.debug("Attempting request getter");
-//            std::string const callback_name = callback_name_iter->get<std::string>();
-//            logger_.debug("Got callback name " + callback_name);
-//            received_message.erase(callback_name_iter);
-//            processRequest(callback_name, received_message);
-//        } else {
-//            throw std::logic_error("No callback name specified");
-//        }
-//        received_message.clear();
-//    }
-//}

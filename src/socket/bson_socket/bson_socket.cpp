@@ -44,13 +44,9 @@ void BsonSocket::sendMessage(const json &message) {
     size_t size_to_complete_send = bson.size();
     ssize_t send_size = 0;
     do {
-
         send_size = send(file_descriptor_, bson.data() + send_size,
                          bson.size() - send_size,
                          0);  // may need to set the flag to MSG_NOSIGNAL
-
-        send_size = send(file_descriptor_, bson.data() + send_size, bson.size() - send_size, 0);
-
         size_to_complete_send -= send_size;
         if (send_size == -1) {
             throw SocketErrnoException("Failed to send to peer.");
