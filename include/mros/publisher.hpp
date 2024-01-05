@@ -18,8 +18,9 @@
 
 using namespace std::chrono_literals;
 
+// Lets PublisherBase know Node exists without inclusion to know it exists
 class Node;
-
+// Non-templated base class for Publishers to allow for ownership by Pointer
 class PublisherBase {
  public:
   friend class Node;
@@ -27,23 +28,55 @@ class PublisherBase {
   virtual ~PublisherBase() = default;
 };
 
+/**
+ * Publisher class
+ * @tparam MessageT Message Type. Requires conversion to and from json
+ */
 template <typename MessageT>
 class Publisher : public std::enable_shared_from_this<Publisher<MessageT>>, public PublisherBase {
  public:
-
+  /**
+   * Deleted base constructor
+   */
   Publisher() = delete;
 
+  /**
+   * Publisher constructor. Please use constructor from node
+   * @param node Non-owning pointer of node
+   * @param topic_name String name of topic shared between publishers and subscribers
+   * @param queue_size Number of messages allowed on the message queue before refusal
+   */
+  Publisher(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size);
+
+  /**
+   * Overridden publisher destructor
+   * Requirements currently unknown TODO
+   */
   ~Publisher() override;
 
+  /**
+   * Pubishes message on topic defined by ctor
+   * @param msg Message to be sent
+   */
   void publish(MessageT const &msg);
 
+  /**
+   * Trivial accessor for Topic Name
+   * @return topic name
+   */
   std::string getTopicName() const;
 
  private:
-  Publisher(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size);
 
+  /**
+   * MROS status accessor for Publisher
+   * @return
+   */
   bool status();
 
+  /**
+   * TODO
+   */
   void socketListener();
 
   std::string topic_name_;

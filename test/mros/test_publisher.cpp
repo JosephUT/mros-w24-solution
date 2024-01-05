@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "messages/exampleMessages.hpp"
-#include "mros/node.hpp"
+#include <mros/node.hpp>
 
 int main(int argc, char **argv) {
   MROS::init(argc, argv);
