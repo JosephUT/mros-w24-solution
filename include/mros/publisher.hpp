@@ -16,6 +16,8 @@
 #include "logging/logging.hpp"
 #include "mros/mros.hpp"
 
+#include <socket/bson_socket/connection_bson_socket.hpp>
+
 using namespace std::chrono_literals;
 
 // Lets PublisherBase know Node exists without inclusion to know it exists
@@ -79,17 +81,43 @@ class Publisher : public std::enable_shared_from_this<Publisher<MessageT>>, publ
    */
   void socketListener();
 
+  /**
+   * name of topic
+   */
   std::string topic_name_;
+
+  /**
+   * Number of messages that can be published before refusal
+   */
   std::uint32_t queue_size_;
 
+  /**
+   * Non-owning pointer of node
+   */
   std::weak_ptr<Node> node_;
 
+  /**
+   * Thread for listening for incoming subscriber connections
+   */
   std::thread socketListenerThread_;
 
-  std::vector<int> subscribers_;
+  /**
+   * Vector to contain information about subscribers
+   */
+  std::vector<std::shared_ptr<ConnectionBsonSocket>> subscribers_;
+
+  /**
+   * Mutex for controlling subscribers_
+   */
   std::mutex subscribersMutex_;
 
+  /**
+   * Logger for debugging
+   */
   Logger &logger_;
+  /**
+   * MROS for signal handling and logger initialization
+   */
   MROS &core_;
 };
 

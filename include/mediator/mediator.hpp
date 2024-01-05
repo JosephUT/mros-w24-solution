@@ -11,6 +11,9 @@
 #include <nlohmann/json.hpp>
 #include "logging/logging.hpp"
 
+#include <socket/json_rpc_socket/connection_json_rpc_socket.hpp>
+#include <socket/server_socket.hpp>
+
 using namespace std::chrono_literals;
 using Json = nlohmann::json;
 
@@ -130,8 +133,13 @@ private:
      */
     void RPCListenerThread();
 
+    /*
+     * =======================================
+     * These are callbacks to be linked to RPC
+     * =======================================
+     * */
     /**
-     * Callback to add subscriber
+     * When we call Node::create_subscriber(), the node calls this callback over RPC internally
      * @param topic_name name of topic to be subscribed
      * @param host socket host
      * @param port socket port
@@ -139,7 +147,7 @@ private:
     void addSubscriber(std::string const &topic_name, std::string const &host, int const port);
 
     /**
-     * Callback to add publisher
+     * When we call Node::create_publisher(), the node calls this callback over RPC internally
      * @param topic_name name of topic to be published
      * @param host socket host
      * @param port socket port
@@ -147,14 +155,14 @@ private:
     void addPublisher(std::string const &topic_name, std::string const &host, int const port);
 
     /**
-     * Callback to remove subscriber
+     * when we destruct a subscriber, the node calls this callback over RPC internally
      * @param topic_name name of topic to be unsubscribed
      * @param host socket host
      * @param port socket port
      */
     void removeSubscriber(std::string const &topic_name, std::string const &host, int const port);
 
-    /** Callback to remove publisher
+    /** When we destruct a publisher, the node calls this callback over RPC internally
      * @param topic_name name of topic to be unpublished
      * @param host socket host
      * @param port socket port
@@ -162,7 +170,7 @@ private:
     void removePublisher(std::string const &topic_name, std::string const &host, int const port);
 
     /**
-     * Callback to add node
+     * When a node is constructed, the node calls this callback over RPC internally
      * @param node_name name of node
      * @param host socket host
      * @param port socket port
@@ -170,12 +178,18 @@ private:
     void addNode(std::string const &node_name, std::string const &host, int const port);
 
     /**
-     * Callback to remove node
+     * When a node is destructed, the node calls this callback over RPC internally
      * @param node_name name of node
      * @param host socket host
      * @param port socket port
      */
     void removeNode(std::string const &node_name, std::string const &host, int const port);
+
+    /*
+     * =============
+     * End callbacks
+     * =============
+     * */
 
     /**
      * Address of mediator
@@ -198,9 +212,9 @@ private:
     MediatorSignalHandler handler;
 
     /**
-     * file descriptor for server
+     * owning pointer to ServerSocket for RPC calls between mediator and nodes
      */
-    int server_fd_;
+    std::shared_ptr<ServerSocket> server_rpc_socket_;
 
     /**
      * Data type that stores topic information. Allows comparison for all members except file descriptor for ease of use
