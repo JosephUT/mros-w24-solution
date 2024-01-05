@@ -20,6 +20,11 @@
 
 using namespace std::chrono_literals;
 
+class Node;
+
+/*
+ * Non-templated base class for ownership
+ */
 class SubscriberBase {
 public:
     friend class Node;
@@ -33,44 +38,119 @@ private:
 };
 
 class Node;
-
+/**
+ * Subscriber class to send messages
+ * @tparam MessageT Type of message to be sent. Requires conversion to and from json
+ */
 template<typename MessageT>
 class Subscriber : public std::enable_shared_from_this<Subscriber<MessageT>>, public SubscriberBase {
 public:
     friend class Node;
 
+    /**
+     * Deleted base ctor for Subscriber
+     */
     Subscriber() = delete;
 
+    /**
+     * Ctor for subscriber. Please use Node::create_subscriber
+     * @param node Non-owning node pointer
+     * @param topic_name String name of topic
+     * @param queue_size The number of messages allowed on the queue before refusal
+     * @param callback The callback function to be called
+     */
+    Subscriber(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size, std::function<void(MessageT)> callback);
+
+    /**
+     * Overriden destructor for subscriber
+     * TODO: outline functionality
+     */
     ~Subscriber() override;
 
+    /**
+     * Trivial accessor for topic name
+     * @return topic name
+     */
     std::string getTopicName() const;
 
 private:
-    Subscriber(std::weak_ptr<Node> node, std::string topic_name, std::uint32_t queue_size, std::function<void(MessageT)> callback);
 
+    /**
+     * Handles continous incoming messages to be called
+     */
     void spin() override;
 
+    /**
+     * Handles message once
+     */
     void spinOnce() override;
 
+    /**
+     * Access status of MROS
+     * @return MROS status
+     */
     bool status();
 
+    /**
+     * Creates thread to receive incoming messages on one file descriptor
+     * @param socket_fd File descriptor
+     */
     void receiverThread(int socket_fd);
 
+    /**
+     * string name of topic
+     */
     std::string topic_name_;
+
+    /**
+     * number of messages to be allowed on the queue
+     */
     std::uint32_t queue_size_;
 
+    /**
+     * Callback to be called with. Takes in Message of type MessageT
+     */
     std::function<void(MessageT)> callbackFunc;
-    
+
+    /**
+     * Non-owning pointer to node used to construct object
+     */
     std::weak_ptr<Node> node_;
 
+    /**
+     * Conidition variable that locks receiving messages until new publisher is added to list and connection is created
+     */
     std::condition_variable spin_cv; //Broadcasted when spin() or spinOnce() is called. Blocks all receivers.
 
-    std::unordered_map<int, std::thread> publisherListenerThreads_; // socket fd -> thread. Makes sure we have one thread per socket exactly
+    /**
+     * Lookup socket file descriptor -> thread. One to one
+     */
+    std::unordered_map<int, std::thread> publisherListenerThreads_;
+
+    /**
+     * Mutex for publisherListenerThreads_ to prevent race conditions
+     */
     std::mutex publisherListenerThreadsMutex_;
+
+    /**
+     * Number of threads waiting
+     * TODO: More information
+     */
     int numThreadsWaiting_ = 0;
+
+    /**
+     * TODO: Unsure
+     */
     bool listenerThreadsCondition = false;
 
+    /**
+     * Reference to logger
+     */
     Logger &logger_;
+
+    /**
+     * Reference to MROS
+     */
     MROS &core_;
 };
 
