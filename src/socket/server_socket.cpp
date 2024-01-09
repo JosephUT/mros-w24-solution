@@ -35,7 +35,7 @@ ServerSocket::~ServerSocket() {
 }
 
 template <class ConnectionSocket>
-std::optional<std::shared_ptr<ConnectionSocket>> ServerSocket::acceptConnection() {
+std::shared_ptr<ConnectionSocket> ServerSocket::acceptConnection() {
   if (!is_open_) throw SocketException("Cannot accept on close socket.");
   sockaddr_in client_address = server_address_; // Must assign to avoid issues with accept
   socklen_t client_address_size = sizeof(client_address);
@@ -44,7 +44,7 @@ std::optional<std::shared_ptr<ConnectionSocket>> ServerSocket::acceptConnection(
   if (connection_file_descriptor == -1) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       // Return null option if accept fails because backlog is empty.
-      return std::nullopt;
+      return nullptr;
     }
     // Throw for other errors.
     throw SocketErrnoException("Failed to accept connection.");
@@ -52,9 +52,6 @@ std::optional<std::shared_ptr<ConnectionSocket>> ServerSocket::acceptConnection(
   // Handle appropriate return paths at compile time.
   if constexpr (std::is_same_v<ConnectionSocket, ConnectionMessageSocket>) {
     auto connection = std::make_shared<ConnectionMessageSocket>(connection_file_descriptor);
-    return connection;
-  } else if constexpr (std::is_same_v<ConnectionSocket, ConnectionRPCSocket>) {
-    auto connection = std::make_shared<ConnectionRPCSocket>(connection_file_descriptor);
     return connection;
   } else if constexpr (std::is_same_v<ConnectionSocket, ConnectionBsonSocket>) {
     auto connection = std::make_shared<ConnectionBsonSocket>(connection_file_descriptor);
@@ -76,15 +73,12 @@ void ServerSocket::close() {
 }
 
 // Explicit instantiation to work with MessageSockets.
-template std::optional<std::shared_ptr<ConnectionMessageSocket>> ServerSocket::acceptConnection<
+template std::shared_ptr<ConnectionMessageSocket> ServerSocket::acceptConnection<
   ConnectionMessageSocket>();
 
-// Explicit instantiation to work with RPCSockets.
-template std::optional<std::shared_ptr<ConnectionRPCSocket>> ServerSocket::acceptConnection<ConnectionRPCSocket>();
-
 // Explicit instantiation to work with BsonSockets.
-template std::optional<std::shared_ptr<ConnectionBsonSocket>> ServerSocket::acceptConnection<ConnectionBsonSocket>();
+template std::shared_ptr<ConnectionBsonSocket> ServerSocket::acceptConnection<ConnectionBsonSocket>();
 
 // Explicit instantiation to work with JsonRPCSockets.
-template std::optional<std::shared_ptr<ConnectionJsonRPCSocket>> ServerSocket::acceptConnection<
+template std::shared_ptr<ConnectionJsonRPCSocket> ServerSocket::acceptConnection<
   ConnectionJsonRPCSocket>();

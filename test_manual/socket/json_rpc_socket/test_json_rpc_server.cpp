@@ -21,11 +21,10 @@ int main(int argc, char** argv) {
         Logger &logger = Logger::getLogger();
         logger.initialize(argc, argv, "JsonRPCServer");
         auto server_socket = std::make_shared<ServerSocket>(kDomain, kServerAddress, kServerPort, queueSize);
-        std::optional<std::shared_ptr<ConnectionJsonRPCSocket>> optional_json_connection_socket;
+        std::shared_ptr<ConnectionJsonRPCSocket> connection_socket;
         do {
-            optional_json_connection_socket = server_socket->acceptConnection<ConnectionJsonRPCSocket>();
-        } while (!optional_json_connection_socket);
-        auto connection_socket = *optional_json_connection_socket;
+            connection_socket = server_socket->acceptConnection<ConnectionJsonRPCSocket>();
+        } while (!connection_socket);
 
         connection_socket->registerRequestCallback("printMessage", &printMessage);
         connection_socket->startConnection();

@@ -19,9 +19,6 @@ set(SOCKET_SOURCES
         src/socket/message_socket/client_message_socket.cpp
         src/socket/message_socket/connection_message_socket.cpp
         src/socket/message_socket/message_socket.cpp
-        src/socket/rpc_socket/client_rpc_socket.cpp
-        src/socket/rpc_socket/connection_rpc_socket.cpp
-        src/socket/rpc_socket/rpc_socket.cpp
         src/socket/client_socket.cpp
         src/socket/connection_socket.cpp
         src/socket/server_socket.cpp
@@ -142,53 +139,9 @@ target_link_libraries(test_message_socket
         GTest::gtest_main
 )
 
-add_executable(test_rpc_socket
-        ${SOCKET_SOURCES}
-        test/socket/rpc_socket/test_rpc_socket.cpp
-)
-target_include_directories(test_rpc_socket
-        PRIVATE
-        include
-)
-target_link_libraries(test_rpc_socket
-        GTest::gtest_main
-)
-gtest_discover_tests(test_rpc_socket)
 gtest_discover_tests(test_message_socket)
 
 # ---------------------------- Manual Unit Tests ----------------------------
-add_executable(test_rpc_client
-        ${SOCKET_SOURCES}
-        test_manual/socket/rpc_socket/test_rpc_client.cpp
-        src/logging/logging.cpp
-)
-target_include_directories(test_rpc_client
-        PRIVATE
-        include
-)
-target_link_libraries(test_rpc_client
-        PRIVATE
-        ${CMAKE_THREAD_LIBS_INIT}
-        EXPAT::EXPAT
-        log4cxx
-)
-
-add_executable(test_rpc_server
-        ${SOCKET_SOURCES}
-        test_manual/socket/rpc_socket/test_rpc_server.cpp
-        src/logging/logging.cpp
-)
-target_include_directories(test_rpc_server
-        PRIVATE
-        include
-)
-target_link_libraries(test_rpc_server
-        PRIVATE
-        ${CMAKE_THREAD_LIBS_INIT}
-        EXPAT::EXPAT
-        log4cxx
-)
-
 add_executable(test_json_rpc_client
         ${SOCKET_SOURCES}
         test_manual/socket/json_rpc_socket/test_json_rpc_client.cpp

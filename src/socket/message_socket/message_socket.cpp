@@ -28,8 +28,8 @@ void MessageSocket::sendMessage(std::string message) {
   size_t size_to_complete_send = message.size();
   ssize_t send_size = 0;
   do {
-    send_size = send(file_descriptor_, reinterpret_cast<const void *>(message.c_str() + send_size),
-                     message.size() - send_size, 0);
+    send_size = send(file_descriptor_, message.data() + send_size,
+                     message.size() - send_size, MSG_NOSIGNAL);
     size_to_complete_send -= send_size;
     if (send_size == -1) {
       throw SocketErrnoException("Failed to send to peer.");
@@ -39,7 +39,7 @@ void MessageSocket::sendMessage(std::string message) {
 
 std::string MessageSocket::receiveMessage() {
   if (!is_open_) throw SocketException("Cannot receive on closed socket.");
-  void *receive_buffer[kReceiveBufferSize_];
+  std::array<char, kReceiveBufferSize_> receive_buffer{};
   std::string received_string;
   std::string received_message;
   ssize_t received_size;
@@ -52,13 +52,13 @@ std::string MessageSocket::receiveMessage() {
   } else {
     // Call recv() until at least one delimiting character is received or an error is returned.
     do {
-      received_size = recv(file_descriptor_, reinterpret_cast<void*>(receive_buffer), sizeof(receive_buffer), 0);
+      received_size = recv(file_descriptor_, receive_buffer.data(), receive_buffer.size(), 0);
       if (received_size == 0) {
         throw PeerClosedException();
       } else if (received_size == -1) {
         throw SocketErrnoException("Failed to receive from peer.");
       }
-      received_string += std::string((char *)receive_buffer, received_size);
+      received_string.append(receive_buffer.data(), received_size);
       ++receive_count;
     } while (received_size > 0 && received_string.find(kDelimitingCharacter_) == std::string::npos);
     bool back_is_delimiter = received_string.back() == kDelimitingCharacter_;
