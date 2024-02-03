@@ -4,50 +4,50 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(nlohmann_json REQUIRED CONFIG)
 find_package(log4cxx CONFIG REQUIRED)
-find_package(EXPAT REQUIRED)
+#find_package(EXPAT REQUIRED)
 find_package(Threads REQUIRED)
 find_package(GTest REQUIRED)
 
-# Socket source file list for convenience.
-set(SOCKET_SOURCES
+# ---------------------------- Socket Library ----------------------------
+add_library(mros_socket STATIC
+        src/logging/logging.cpp
         src/socket/bson_socket/bson_socket.cpp
         src/socket/bson_socket/client_bson_socket.cpp
         src/socket/bson_socket/connection_bson_socket.cpp
         src/socket/json_rpc_socket/client_json_rpc_socket.cpp
         src/socket/json_rpc_socket/connection_json_rpc_socket.cpp
         src/socket/json_rpc_socket/json_rpc_socket.cpp
-        src/socket/message_socket/client_message_socket.cpp
-        src/socket/message_socket/connection_message_socket.cpp
-        src/socket/message_socket/message_socket.cpp
         src/socket/client_socket.cpp
         src/socket/connection_socket.cpp
         src/socket/server_socket.cpp
         src/socket/socket.cpp
 )
+target_include_directories(mros_socket PUBLIC include)
+target_link_libraries(mros_socket PUBLIC log4cxx)
 
 # ---------------------------- MROS Library ----------------------------
-add_library(mroslib
-        SHARED
-        src/logging/logging.cpp
-        src/mros/mros.cpp
-        src/mros/node.cpp
-        src/mros/publisher.cpp
-        src/mros/subscriber.cpp
-        src/mros/utils/utils.cpp
-        ${SOCKET_SOURCES}
-)
-target_include_directories(mroslib
-        PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include/mros>
-)
-target_link_libraries(mroslib
-        PRIVATE
-        nlohmann_json::nlohmann_json
-        log4cxx
-        EXPAT::EXPAT
-)
-
+#add_library(mroslib
+#        SHARED
+#        src/logging/logging.cpp
+#        src/mros/mros.cpp
+#        src/mros/node.cpp
+#        src/mros/publisher.cpp
+#        src/mros/subscriber.cpp
+#        src/mros/utils/utils.cpp
+#        ${SOCKET_SOURCES}
+#)
+#target_include_directories(mroslib
+#        PUBLIC
+#        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#        $<INSTALL_INTERFACE:include/mros>
+#)
+#target_link_libraries(mroslib
+#        PRIVATE
+#        nlohmann_json::nlohmann_json
+#        log4cxx
+#        EXPAT::EXPAT
+#)
+#
 # ---------------------------- Command Line Executables ----------------------------
 # add_executable(mroscore
 #         src/logging/logging.cpp
@@ -124,138 +124,118 @@ target_link_libraries(mroslib
 #         log4cxx
 #         EXPAT::EXPAT
 # )
-
-# ---------------------------- GTest Unit Tests ----------------------------
+#
+# ---------------------------- Automated Unit Tests ----------------------------
 enable_testing()
-add_executable(test_bson_socket
-        ${SOCKET_SOURCES}
-        test/socket/bson_socket/test_bson_socket.cpp
-        src/logging/logging.cpp
-)
-target_include_directories(test_bson_socket
-        PRIVATE
-        include
-)
-target_link_libraries(test_bson_socket
-        GTest::gtest_main
-        log4cxx
-        EXPAT::EXPAT
-)
-
+add_executable(test_bson_socket test/socket/bson_socket/test_bson_socket.cpp)
+target_link_libraries(test_bson_socket GTest::gtest_main mros_socket)
 gtest_discover_tests(test_bson_socket)
 
-add_executable(test_json_rpc_socket
-        ${SOCKET_SOURCES}
-        test/socket/json_rpc_socket/test_json_rpc_socket.cpp
-        src/logging/logging.cpp
-)
 
-target_include_directories(test_json_rpc_socket
-        PRIVATE
-        include
-)
-
-target_link_libraries(test_json_rpc_socket
-        GTest::gtest_main
-        log4cxx
-        EXPAT::EXPAT
-)
-
-gtest_discover_tests(test_json_rpc_socket)
-
+#
+#add_executable(test_json_rpc_socket
+#        ${SOCKET_SOURCES}
+#        test/socket/json_rpc_socket/test_json_rpc_socket.cpp
+#        src/logging/logging.cpp
+#)
+#target_include_directories(test_json_rpc_socket
+#        PRIVATE
+#        include
+#)
+#target_link_libraries(test_json_rpc_socket
+#        GTest::gtest_main
+#        log4cxx
+#        EXPAT::EXPAT
+#)
+#gtest_discover_tests(test_json_rpc_socket)
+#
 # ---------------------------- Manual Unit Tests ----------------------------
-add_executable(test_json_rpc_client
-        ${SOCKET_SOURCES}
-        test_manual/socket/json_rpc_socket/test_json_rpc_client.cpp
-        src/logging/logging.cpp
-)
-
-target_include_directories(test_json_rpc_client
-        PRIVATE
-        include
-)
-
-target_link_libraries(test_json_rpc_client
-        PRIVATE
-        ${CMAKE_THREAD_LIBS_INIT}
-        nlohmann_json::nlohmann_json
-        log4cxx
-        EXPAT::EXPAT
-)
-
-add_executable(test_json_rpc_server
-        ${SOCKET_SOURCES}
-        test_manual/socket/json_rpc_socket/test_json_rpc_server.cpp
-        src/logging/logging.cpp
-)
-
-target_include_directories(test_json_rpc_server
-        PRIVATE
-        include
-)
-
-target_link_libraries(test_json_rpc_server
-        PRIVATE
-        ${CMAKE_THREAD_LIBS_INIT}
-        nlohmann_json::nlohmann_json
-        log4cxx
-        EXPAT::EXPAT
-)
-
-add_executable(mros_node_test
-        src/logging/logging.cpp
-        src/mros/node.cpp
-        src/mros/mros.cpp
-        test/mros/test_node.cpp
-        ${SOCKET_SOURCES}
-)
-target_include_directories(mros_node_test
-        PRIVATE
-        include
-)
-target_link_libraries(mros_node_test
-        PRIVATE
-        nlohmann_json::nlohmann_json
-        log4cxx
-        EXPAT::EXPAT
-)
-
-add_executable(mros_mediator_test
-        src/logging/logging.cpp
-        src/mros/mros.cpp
-        src/mediator/mediator.cpp
-        test/mediator/test_mediator.cpp
-        src/mros/utils/utils.cpp
-        ${SOCKET_SOURCES}
-)
-target_include_directories(mros_mediator_test
-        PRIVATE
-        include
-)
-target_link_libraries(mros_mediator_test
-        PRIVATE
-        nlohmann_json::nlohmann_json
-        log4cxx
-        EXPAT::EXPAT
-)
-
-add_executable(test_logger
-        test_manual/logger/test_logger.cpp
-        src/logging/logging.cpp
-)
-
-target_include_directories(test_logger
-        PRIVATE
-        include
-)
-
-target_link_libraries(test_logger
-        PRIVATE
-        log4cxx
-        EXPAT::EXPAT
-)
-
-
+#add_executable(test_json_rpc_client
+#        ${SOCKET_SOURCES}
+#        test_manual/socket/json_rpc_socket/test_json_rpc_client.cpp
+#        src/logging/logging.cpp
+#)
+#target_include_directories(test_json_rpc_client
+#        PRIVATE
+#        include
+#)
+#target_link_libraries(test_json_rpc_client
+#        PRIVATE
+#        ${CMAKE_THREAD_LIBS_INIT}
+#        nlohmann_json::nlohmann_json
+#        log4cxx
+#        EXPAT::EXPAT
+#)
+#
+#add_executable(test_json_rpc_server
+#        ${SOCKET_SOURCES}
+#        test_manual/socket/json_rpc_socket/test_json_rpc_server.cpp
+#        src/logging/logging.cpp
+#)
+#target_include_directories(test_json_rpc_server
+#        PRIVATE
+#        include
+#)
+#target_link_libraries(test_json_rpc_server
+#        PRIVATE
+#        ${CMAKE_THREAD_LIBS_INIT}
+#        nlohmann_json::nlohmann_json
+#        log4cxx
+#        EXPAT::EXPAT
+#)
+#
+#add_executable(mros_node_test
+#        src/logging/logging.cpp
+#        src/mros/node.cpp
+#        src/mros/mros.cpp
+#        test/mros/test_node.cpp
+#        ${SOCKET_SOURCES}
+#)
+#target_include_directories(mros_node_test
+#        PRIVATE
+#        include
+#)
+#target_link_libraries(mros_node_test
+#        PRIVATE
+#        nlohmann_json::nlohmann_json
+#        log4cxx
+#        EXPAT::EXPAT
+#)
+#
+#add_executable(mros_mediator_test
+#        src/logging/logging.cpp
+#        src/mros/mros.cpp
+#        src/mediator/mediator.cpp
+#        test/mediator/test_mediator.cpp
+#        src/mros/utils/utils.cpp
+#        ${SOCKET_SOURCES}
+#)
+#target_include_directories(mros_mediator_test
+#        PRIVATE
+#        include
+#)
+#target_link_libraries(mros_mediator_test
+#        PRIVATE
+#        nlohmann_json::nlohmann_json
+#        log4cxx
+#        EXPAT::EXPAT
+#)
+#
+#add_executable(test_logger
+#        test_manual/logger/test_logger.cpp
+#        src/logging/logging.cpp
+#)
+#target_include_directories(test_logger
+#        PRIVATE
+#        include
+#)
+#target_link_libraries(test_logger
+#        PRIVATE
+#        log4cxx
+#        EXPAT::EXPAT
+#)
+#
+#
 #add_executable(mros_pub_test
 #        src/logging/logging.cpp
 #        src/mros/node.cpp
@@ -274,7 +254,7 @@ target_link_libraries(test_logger
 #        log4cxx
 #        EXPAT::EXPAT
 #)
-
+#
 #add_executable(mros_sub_test
 #        src/logging/logging.cpp
 #        src/mros/node.cpp

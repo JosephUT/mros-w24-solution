@@ -50,10 +50,7 @@ std::shared_ptr<ConnectionSocket> ServerSocket::acceptConnection() {
     throw SocketErrnoException("Failed to accept connection.");
   }
   // Handle appropriate return paths at compile time.
-  if constexpr (std::is_same_v<ConnectionSocket, ConnectionMessageSocket>) {
-    auto connection = std::make_shared<ConnectionMessageSocket>(connection_file_descriptor);
-    return connection;
-  } else if constexpr (std::is_same_v<ConnectionSocket, ConnectionBsonSocket>) {
+  if constexpr (std::is_same_v<ConnectionSocket, ConnectionBsonSocket>) {
     auto connection = std::make_shared<ConnectionBsonSocket>(connection_file_descriptor);
     return connection;
   } else if constexpr (std::is_same_v<ConnectionSocket, ConnectionJsonRPCSocket>) {
@@ -71,10 +68,6 @@ void ServerSocket::close() {
     is_open_ = false;
   }
 }
-
-// Explicit instantiation to work with MessageSockets.
-template std::shared_ptr<ConnectionMessageSocket> ServerSocket::acceptConnection<
-  ConnectionMessageSocket>();
 
 // Explicit instantiation to work with BsonSockets.
 template std::shared_ptr<ConnectionBsonSocket> ServerSocket::acceptConnection<ConnectionBsonSocket>();
