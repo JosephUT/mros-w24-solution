@@ -13,8 +13,11 @@
 #include <thread>
 #include <unordered_set>
 
-#include "logging/logging.hpp"
-#include "mros/mros.hpp"
+#include <logging/logging.hpp>
+#include <mros/mros.hpp>
+
+#include <socket/bson_socket/connection_bson_socket.hpp>
+#include <socket/server_socket.hpp>
 
 using namespace std::chrono_literals;
 
@@ -46,18 +49,22 @@ class Publisher : public std::enable_shared_from_this<Publisher<MessageT>>, publ
 
   void socketListener();
 
-  std::string topic_name_;
-  std::uint32_t queue_size_;
 
   std::weak_ptr<Node> node_;
+  std::string topic_name_;
+  std::uint32_t queue_size_;
+  Logger &logger_;
+  MROS &core_;
 
   std::thread socketListenerThread_;
 
-  std::vector<int> subscribers_;
+  std::shared_ptr<ServerSocket> publisherSocket_;
+
+  std::vector<std::shared_ptr<ConnectionBsonSocket>> subscribers_;
   std::mutex subscribersMutex_;
 
-  Logger &logger_;
-  MROS &core_;
+
+
 };
 
 template <typename MessageT>
@@ -71,7 +78,8 @@ Publisher<MessageT>::Publisher(std::weak_ptr<Node> node, std::string topic_name,
   logger_.debug("Initializing Publisher");
   core_.registerHandler();
 
-  socketListenerThread_ = std::thread(&Publisher::socketListener, this);
+  publisherSocket_ = std::make_shared<ServerSocket>(AF_INET, "127.0.0.1", 8080, 100);
+
 
   logger_.debug("Publisher constructor complete");
 }
@@ -96,6 +104,7 @@ void Publisher<MessageT>::publish(const MessageT &msg) {
   subscribersMutex_.lock();
   for (auto &sub : subscribers_) {
     // TODO send message to all subscribers
+
   }
   subscribersMutex_.unlock();
 

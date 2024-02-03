@@ -127,19 +127,41 @@ target_link_libraries(mroslib
 
 # ---------------------------- GTest Unit Tests ----------------------------
 enable_testing()
-add_executable(test_message_socket
+add_executable(test_bson_socket
         ${SOCKET_SOURCES}
-        test/socket/message_socket/test_message_socket.cpp
+        test/socket/bson_socket/test_bson_socket.cpp
+        src/logging/logging.cpp
 )
-target_include_directories(test_message_socket
+target_include_directories(test_bson_socket
         PRIVATE
         include
 )
-target_link_libraries(test_message_socket
+target_link_libraries(test_bson_socket
         GTest::gtest_main
+        log4cxx
+        EXPAT::EXPAT
 )
 
-gtest_discover_tests(test_message_socket)
+gtest_discover_tests(test_bson_socket)
+
+add_executable(test_json_rpc_socket
+        ${SOCKET_SOURCES}
+        test/socket/json_rpc_socket/test_json_rpc_socket.cpp
+        src/logging/logging.cpp
+)
+
+target_include_directories(test_json_rpc_socket
+        PRIVATE
+        include
+)
+
+target_link_libraries(test_json_rpc_socket
+        GTest::gtest_main
+        log4cxx
+        EXPAT::EXPAT
+)
+
+gtest_discover_tests(test_json_rpc_socket)
 
 # ---------------------------- Manual Unit Tests ----------------------------
 add_executable(test_json_rpc_client
