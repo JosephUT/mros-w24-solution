@@ -9,16 +9,18 @@
 
 #include <array>
 #include <cerrno>
+#include <concepts>
 #include <cstring>
 #include <memory>
 #include <optional>
-#include <socket/connection_socket.hpp>
-#include <socket/bson_socket/connection_bson_socket.hpp>
-#include <socket/json_rpc_socket/connection_json_rpc_socket.hpp>
-#include <socket/socket.hpp>
-#include <socket/utils/socket_exception.hpp>
 #include <string>
 #include <type_traits>
+
+#include "socket/bson_rpc_socket/connection_bson_rpc_socket.hpp"
+#include "socket/bson_socket/connection_bson_socket.hpp"
+#include "socket/connection_socket.hpp"
+#include "socket/socket.hpp"
+#include "socket/utils/socket_exception.hpp"
 
 /**
  * Class wrapping server sockets. Accepts client connect() calls and returns connected sockets, which should be passed
@@ -43,13 +45,13 @@ class ServerSocket : public Socket {
   ~ServerSocket() override;
 
   /**
-   * Accept the first connection in the listening backlog and generate a connected socket of type ConnectionType.
+   * Accept the first connection in the listening backlog and generate a connection socket.
    * Subclasses should template with the associated ConnectionSocket type. These must return an error
    * @return Shared pointer to generated connection socket class instance.
    * @throws SocketException Throws exception on failure to accept.
    */
-  template <class ConnectionSocket>
-  std::shared_ptr<ConnectionSocket> acceptConnection();
+  template <class T>
+  std::shared_ptr<T> acceptConnection() requires std::derived_from<T, ConnectionSocket>;
 
   /**
    * Close the socket's file descriptor if it is not already closed.

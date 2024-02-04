@@ -1,13 +1,13 @@
 #ifndef MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP
 #define MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP
 
-#include <socket/client_socket.hpp>
-#include <socket/json_rpc_socket/json_rpc_socket.hpp>
+#include "socket/bson_rpc_socket/bson_rpc_socket.hpp"
+#include "socket/client_socket.hpp"
 // TODO: Change from Message Socket
 /**
  * Class combining string rpc functionality with client style socket initialization.
  */
-class ClientJsonRPCSocket : virtual public ClientSocket, virtual public JsonRPCSocket {
+class ClientBsonRPCSocket : virtual public ClientSocket, virtual public BsonRPCSocket {
  public:
   /**
    * Initialize socket with information of server socket it will connect to.
@@ -16,12 +16,12 @@ class ClientJsonRPCSocket : virtual public ClientSocket, virtual public JsonRPCS
    * @param port The port number of the server.
    * @throws SocketException Throw exception if socket() call fails.
    */
-  ClientJsonRPCSocket(int domain, const std::string& server_address, int port);
+  ClientBsonRPCSocket(int domain, const std::string& server_address, int port);
 
   /**
    * Default destructor to allow for concrete class.
    */
-  ~ClientJsonRPCSocket() override = default;
+  ~ClientBsonRPCSocket() override = default;
 
   /**
    * Connects to the server socket. Waits indefinitely for the resulting connection socket to
@@ -46,4 +46,4 @@ class ClientJsonRPCSocket : virtual public ClientSocket, virtual public JsonRPCS
   std::thread setup_thread_;
 };
 
-#endif //MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP
+#endif  // MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP

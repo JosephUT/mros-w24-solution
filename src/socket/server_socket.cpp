@@ -34,8 +34,8 @@ ServerSocket::~ServerSocket() {
   close();
 }
 
-template <class ConnectionSocket>
-std::shared_ptr<ConnectionSocket> ServerSocket::acceptConnection() {
+template <class T>
+std::shared_ptr<T> ServerSocket::acceptConnection() requires std::derived_from<T, ConnectionSocket> {
   if (!is_open_) throw SocketException("Cannot accept on close socket.");
   sockaddr_in client_address = server_address_; // Must assign to avoid issues with accept
   socklen_t client_address_size = sizeof(client_address);
@@ -53,11 +53,11 @@ std::shared_ptr<ConnectionSocket> ServerSocket::acceptConnection() {
   if constexpr (std::is_same_v<ConnectionSocket, ConnectionBsonSocket>) {
     auto connection = std::make_shared<ConnectionBsonSocket>(connection_file_descriptor);
     return connection;
-  } else if constexpr (std::is_same_v<ConnectionSocket, ConnectionJsonRPCSocket>) {
-    auto connection = std::make_shared<ConnectionJsonRPCSocket>(connection_file_descriptor);
+  } else if constexpr (std::is_same_v<ConnectionSocket, ConnectionBsonRPCSocket>) {
+    auto connection = std::make_shared<ConnectionBsonRPCSocket>(connection_file_descriptor);
     return connection;
   } else {
-    return std::make_shared<ConnectionSocket>(connection_file_descriptor);
+    return std::make_shared<T>(connection_file_descriptor);
   }
 }
 
@@ -72,6 +72,6 @@ void ServerSocket::close() {
 // Explicit instantiation to work with BsonSockets.
 template std::shared_ptr<ConnectionBsonSocket> ServerSocket::acceptConnection<ConnectionBsonSocket>();
 
-// Explicit instantiation to work with JsonRPCSockets.
-template std::shared_ptr<ConnectionJsonRPCSocket> ServerSocket::acceptConnection<
-  ConnectionJsonRPCSocket>();
+// Explicit instantiation to work with BsonRPCSockets.
+template std::shared_ptr<ConnectionBsonRPCSocket> ServerSocket::acceptConnection<
+  ConnectionBsonRPCSocket>();

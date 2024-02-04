@@ -29,10 +29,10 @@ class BsonSocket : virtual public Socket {
   ~BsonSocket() override = 0;
 
   /**
-   * Send a message message in completion by calling send() until all bytes are sent.
-   * @param message The message message to send.
-   * @throws SocketException Throws exception on failure of send() or if this socket is closed, or if message contains a
-   * delimiting character.
+   * Send a Json message in completion by calling send() until all bytes are sent.
+   * @param message The message to send.
+   * @throws SocketException Throws exception if socket is closed.
+   * @throws SocketErrnoException Throws exception on failure of send().
    * @throws PeerClosedException Throws exception if peer has closed. Users may catch and instantiate a closing
    * sequence.
    */
@@ -41,15 +41,15 @@ class BsonSocket : virtual public Socket {
   /**
    * Receive a Bson message, storing any additionally received items.
    * @return The bson message received.
-   * @throws SocketException Throws exception on failure of recv() or if this socket it closed.
+   * @throws SocketException Throws exception if socket is closed.
+   * @throws SocketErrnoException Throws exception on failure of recv().
    * @throws PeerClosedException Throws exception if peer has closed. Users may catch and instantiate a closing
    * sequence.
    */
   json receiveMessage();
 
   /**
-   * Boolean, true if socket file descriptor is open, false otherwise. Defaults to true since derived classes will be
-   * open upon successful construction.
+   * Close the socket if it is not already closed.
    */
   virtual void close();
 
@@ -64,4 +64,6 @@ class BsonSocket : virtual public Socket {
   static int constexpr const kReceiveBufferSize_ = 4;
 
   static std::uint8_t constexpr const kDelimitingCharacter_ = '$';
+
+  BsonString storage_bson_;
 };

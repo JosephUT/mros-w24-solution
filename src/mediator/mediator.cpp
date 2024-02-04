@@ -53,9 +53,9 @@ void Mediator::RPCListenerThread() {
     LogContext context("Mediator::RPCListenerThread");
     logger_.debug("Starting RPCListenerThread");
     while(status()) {
-        std::shared_ptr<ConnectionJsonRPCSocket> connection_socket;
+        std::shared_ptr<ConnectionBsonRPCSocket> connection_socket;
         do {
-          connection_socket = json_rpc_server_->acceptConnection<ConnectionJsonRPCSocket>();
+          connection_socket = json_rpc_server_->acceptConnection<ConnectionBsonRPCSocket>();
         } while (status() && !connection_socket);
 
         if (!status()) {

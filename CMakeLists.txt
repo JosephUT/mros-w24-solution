@@ -11,12 +11,12 @@ find_package(GTest REQUIRED)
 # ---------------------------- Socket Library ----------------------------
 add_library(mros_socket STATIC
         src/logging/logging.cpp
+        src/socket/bson_rpc_socket/bson_rpc_socket.cpp
+        src/socket/bson_rpc_socket/client_bson_rpc_socket.cpp
+        src/socket/bson_rpc_socket/connection_bson_rpc_socket.cpp
         src/socket/bson_socket/bson_socket.cpp
         src/socket/bson_socket/client_bson_socket.cpp
         src/socket/bson_socket/connection_bson_socket.cpp
-        src/socket/json_rpc_socket/client_json_rpc_socket.cpp
-        src/socket/json_rpc_socket/connection_json_rpc_socket.cpp
-        src/socket/json_rpc_socket/json_rpc_socket.cpp
         src/socket/client_socket.cpp
         src/socket/connection_socket.cpp
         src/socket/server_socket.cpp
@@ -131,24 +131,10 @@ add_executable(test_bson_socket test/socket/bson_socket/test_bson_socket.cpp)
 target_link_libraries(test_bson_socket GTest::gtest_main mros_socket)
 gtest_discover_tests(test_bson_socket)
 
+add_executable(test_bson_rpc_socket test/socket/bson_rpc_socket/test_bson_rpc_socket.cpp)
+target_link_libraries(test_bson_rpc_socket PUBLIC GTest::gtest_main mros_socket)
+gtest_discover_tests(test_bson_rpc_socket)
 
-#
-#add_executable(test_json_rpc_socket
-#        ${SOCKET_SOURCES}
-#        test/socket/json_rpc_socket/test_json_rpc_socket.cpp
-#        src/logging/logging.cpp
-#)
-#target_include_directories(test_json_rpc_socket
-#        PRIVATE
-#        include
-#)
-#target_link_libraries(test_json_rpc_socket
-#        GTest::gtest_main
-#        log4cxx
-#        EXPAT::EXPAT
-#)
-#gtest_discover_tests(test_json_rpc_socket)
-#
 # ---------------------------- Manual Unit Tests ----------------------------
 #add_executable(test_json_rpc_client
 #        ${SOCKET_SOURCES}

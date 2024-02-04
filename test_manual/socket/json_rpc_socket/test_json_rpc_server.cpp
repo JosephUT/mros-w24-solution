@@ -1,10 +1,8 @@
 #include <iostream>
+#include <logging/logging.hpp>
 #include <memory>
 #include <nlohmann/json.hpp>
-
-#include <logging/logging.hpp>
-
-#include <socket/json_rpc_socket/connection_json_rpc_socket.hpp>
+#include <socket/bson_rpc_socket/connection_bson_rpc_socket.hpp>
 #include <socket/server_socket.hpp>
 
 using namespace nlohmann;
@@ -21,9 +19,9 @@ int main(int argc, char** argv) {
         Logger &logger = Logger::getLogger();
         logger.initialize(argc, argv, "JsonRPCServer");
         auto server_socket = std::make_shared<ServerSocket>(kDomain, kServerAddress, kServerPort, queueSize);
-        std::shared_ptr<ConnectionJsonRPCSocket> connection_socket;
+        std::shared_ptr<ConnectionBsonRPCSocket> connection_socket;
         do {
-            connection_socket = server_socket->acceptConnection<ConnectionJsonRPCSocket>();
+            connection_socket = server_socket->acceptConnection<ConnectionBsonRPCSocket>();
         } while (!connection_socket);
 
         connection_socket->registerRequestCallback("printMessage", &printMessage);

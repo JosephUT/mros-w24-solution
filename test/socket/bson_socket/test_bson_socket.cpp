@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 
 #include <string>
-#include <iostream>
 
 #include "socket/bson_socket/client_bson_socket.hpp"
 #include "socket/bson_socket/connection_bson_socket.hpp"
@@ -20,7 +19,6 @@ class MessageSocketTest : public testing::Test {
     message1_["message"] = "sending a test string";
     message2_["message"] = "another test string for testing if multiple receives are different";
     message3_["message"] = "a final test string just to be sure";
-    bad_message_["message"] = "sending a test string containing a $ character";
     long_message_["message"] = std::string(100000, 'a');
 
     // Set up connection socket.
@@ -54,12 +52,6 @@ class MessageSocketTest : public testing::Test {
   json message1_;
   json message2_;
   json message3_;
-
-  /**
-   * String containing an invalid delimiting character. NOTE: Changing the choice of delimiting character will cause
-   * this test to fail.
-   */
-  json bad_message_;
 
   /**
    * Length, character, and corresponding large string to stress test send and receive.
@@ -100,47 +92,39 @@ TEST_F(MessageSocketTest, SendReceive) {
     ASSERT_EQ(client_socket_->receiveMessage(), message);
   }
 }
-//
-///**
-// * Test if the sockets can handle large messages.
-// */
-// TEST_F(MessageSocketTest, StressSendReceive) {
-//  connection_socket_->sendMessage(long_message_);
-//  client_socket_->sendMessage(long_message_);
-//  ASSERT_EQ(connection_socket_->receiveMessage(), long_message_);
-//  ASSERT_EQ(client_socket_->receiveMessage(), long_message_);
-//}
-//
-///**
-// * Test if sockets can be reinitialized and communicated over.
-// */
-// TEST_F(MessageSocketTest, CloseReopen) {
-//  TearDown();
-//  server_socket_.reset();
-//  connection_socket_.reset();
-//  client_socket_.reset();
-//  SetUp();
-//  connection_socket_->sendMessage(message1_);
-//  client_socket_->sendMessage(message1_);
-//  ASSERT_EQ(client_socket_->receiveMessage(), message1_);
-//  ASSERT_EQ(connection_socket_->receiveMessage(), message1_);
-//}
-//
-///**
-// * Test if sockets throw when send or receive is called on a closed socket.
-// */
-// TEST_F(MessageSocketTest, ThrowClosed) {
-//  client_socket_->close();
-//  ASSERT_THROW(client_socket_->sendMessage(message1_), SocketException);
-//  ASSERT_THROW(client_socket_->receiveMessage(), SocketException);
-//  ASSERT_THROW(connection_socket_->sendMessage(message1_), PeerClosedException);
-//  ASSERT_THROW(connection_socket_->receiveMessage(), PeerClosedException);
-//}
-//
-///**
-// * Test if sockets throw when send is called with a message that contains a delimiting character.
-// */
-// TEST_F(MessageSocketTest, ThrowMessageContainsDelimiter) {
-//  ASSERT_THROW(connection_socket_->sendMessage(bad_message_), SocketException);
-//  ASSERT_THROW(client_socket_->sendMessage(bad_message_), SocketException);
-//}
+
+/**
+ * Test if the sockets can handle large messages.
+ */
+ TEST_F(MessageSocketTest, StressSendReceive) {
+  connection_socket_->sendMessage(long_message_);
+  client_socket_->sendMessage(long_message_);
+  ASSERT_EQ(connection_socket_->receiveMessage(), long_message_);
+  ASSERT_EQ(client_socket_->receiveMessage(), long_message_);
+}
+
+/**
+ * Test if sockets can be reinitialized and communicated over.
+ */
+ TEST_F(MessageSocketTest, CloseReopen) {
+  TearDown();
+  server_socket_.reset();
+  connection_socket_.reset();
+  client_socket_.reset();
+  SetUp();
+  connection_socket_->sendMessage(message1_);
+  client_socket_->sendMessage(message1_);
+  ASSERT_EQ(client_socket_->receiveMessage(), message1_);
+  ASSERT_EQ(connection_socket_->receiveMessage(), message1_);
+}
+
+/**
+ * Test if sockets throw when send or receive is called on a closed socket.
+ */
+ TEST_F(MessageSocketTest, ThrowClosed) {
+  client_socket_->close();
+  ASSERT_THROW(client_socket_->sendMessage(message1_), SocketException);
+  ASSERT_THROW(client_socket_->receiveMessage(), SocketException);
+  ASSERT_THROW(connection_socket_->sendMessage(message1_), PeerClosedException);
+  ASSERT_THROW(connection_socket_->receiveMessage(), PeerClosedException);
+}

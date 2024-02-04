@@ -1,21 +1,19 @@
 #ifndef MROS_W24_SOLUTION_MAIN_NODE_HPP
 #define MROS_W24_SOLUTION_MAIN_NODE_HPP
 
-#include <csignal>
 #include <atomic>
 #include <chrono>
-#include <unordered_map>
-#include <unordered_set>
+#include <csignal>
 #include <exception>
-#include <thread>
-
-#include <nlohmann/json.hpp>
 #include <logging/logging.hpp>
 #include <mros/mros.hpp>
-
-#include <socket/json_rpc_socket/json_rpc_socket.hpp>
-#include <socket/json_rpc_socket/connection_json_rpc_socket.hpp>
+#include <nlohmann/json.hpp>
+#include <socket/bson_rpc_socket/bson_rpc_socket.hpp>
+#include <socket/bson_rpc_socket/connection_bson_rpc_socket.hpp>
 #include <socket/server_socket.hpp>
+#include <thread>
+#include <unordered_map>
+#include <unordered_set>
 
 using namespace std::chrono_literals;
 using Json = nlohmann::json;
@@ -71,7 +69,7 @@ private:
     std::unordered_map<std::string, std::vector<Topic>> publisherTable_;    // topic_name -> vector of topics
     std::unordered_map<std::string, std::string> nodeTable_;                //URI -> name
 
-    std::unordered_set<std::shared_ptr<ConnectionJsonRPCSocket>> connection_list_;
+    std::unordered_set<std::shared_ptr<ConnectionBsonRPCSocket>> connection_list_;
     std::mutex subMutex_;
     std::mutex pubMutex_;
     std::mutex nodeMutex_;
