@@ -1,96 +1,122 @@
-#ifndef MROS_W24_SOLUTION_MAIN_NODE_HPP
-#define MROS_W24_SOLUTION_MAIN_NODE_HPP
+#pragma once
 
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <exception>
-#include <logging/logging.hpp>
-#include <mros/mros.hpp>
 #include <nlohmann/json.hpp>
-#include <socket/bson_rpc_socket/bson_rpc_socket.hpp>
-#include <socket/bson_rpc_socket/connection_bson_rpc_socket.hpp>
-#include <socket/server_socket.hpp>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
+#include "logging/logging.hpp"
+#include "mros/mros.hpp"
+#include "socket/bson_rpc_socket/connection_bson_rpc_socket.hpp"
+#include "socket/server_socket.hpp"
+
 using namespace std::chrono_literals;
 using Json = nlohmann::json;
 
+using TopicName = std::string;
+using NodeURI = std::string;
+using NumSubscribers = int;
 
-
-class Mediator : public std::enable_shared_from_this<Mediator> {
-
-public:
-    Mediator(std::string address, int port);
-
-    Mediator();
-
-    ~Mediator();
-
-    void spin();
-
-private:
-    void RPCListenerThread();
-
-    Json addSubscriber(std::string const &topic_name, std::string const &host, int const port, std::string const& message_name);
-
-    Json addPublisher(std::string const &topic_name, std::string const &host, int const port, std::string const& message_name);
-
-    Json removeSubscriber(std::string const &topic_name, std::string const &host, int const port, std::string const& message_name);
-
-    Json removePublisher(std::string const &topic_name, std::string const &host, int const port, std::string const& message_name);
-
-    void addNode(std::string const &node_name, std::string const &host, int const port);
-
-    void removeNode(std::string const &node_name, std::string const &host, int const port);
-
-    std::string address_;
-    int port_;
-    MROS& mros_;
-    Logger &logger_;
-
-    
-    std::unique_ptr<ServerSocket> json_rpc_server_;
-
-    struct Topic {
-      std::string host;
-      int port;
-      std::string topic_name;
-      std::string message_name;
-
-      bool operator==(Topic const& rhs) const {
-        return port = rhs.port && host == rhs.host && topic_name == rhs.topic_name && message_name == rhs.message_name;
-      }
-    };
-
-    std::unordered_map<std::string, std::vector<Topic>> subscriberTable_;   // topic_name -> vector of topics
-    std::unordered_map<std::string, std::vector<Topic>> publisherTable_;    // topic_name -> vector of topics
-    std::unordered_map<std::string, std::string> nodeTable_;                //URI -> name
-
-    std::unordered_set<std::shared_ptr<ConnectionBsonRPCSocket>> connection_list_;
-    std::mutex subMutex_;
-    std::mutex pubMutex_;
-    std::mutex nodeMutex_;
-
-    std::thread RPCListenerThread_;
-
-
-    bool status() {
-        return mros_.status();
-    }
-
-    Json jsonSubscribeCallback(Json const& json);
-
-    Json jsonUnsubscribeCallback(Json const& json);
-
-    Json jsonPublishCallback(Json const& json);
-
-    Json jsonUnpublishCallback(Json const& json);
-
+struct AddressPort {
+  std::string host;
+  int port;
 };
 
+struct TopicData {
+  std::vector<NodeURI> publishing_nodes;
+  std::vector<NodeURI> subscribing_nodes;
+};
 
+struct NodeData {
+  std::string name;
+  std::shared_ptr<ConnectionBsonRPCSocket> connection;
+  std::unordered_map<TopicName, std::vector<AddressPort>> publisher_data_by_topic;
+  std::unordered_map<TopicName, NumSubscribers> subscriber_data_by_topic;
+};
 
-#endif //MROS_W24_SOLUTION_MAIN_NODE_HPP
+class Mediator : public std::enable_shared_from_this<Mediator> {
+ public:
+  /**
+   * Set up mediator to accept connections at a specific address and port.
+   */
+  Mediator(std::string address = "127.0.0.1", int port = 13330);
+
+  Mediator();
+  ~Mediator();
+
+  /**
+   * Accept and set up connections from nodes until the process is terminated, shutdown all connections on termination.
+   */
+  void handleRPCConnections();
+
+  /**
+   * Check whether a termination signal has been sent to the process.
+   */
+  bool status() { return mros_.status(); }
+
+  /** Callback functions **/
+
+  /**
+   * Update node_table_ to add node. Nodes request this callback immediately after their connection is accepted.
+   */
+  void addNode();
+
+  /**
+   * Update tables to add publisher. Requests that all subscribing nodes connect to the new publisher. Nodes request
+   * this callback when the user creates a publisher.
+   */
+  void addPublisher();
+
+  /**
+   * Update tables to add subscriber. Requests that the calling node connect to all the existing publishers. Nodes
+   * request this callback when the user creates a subscriber.
+   */
+  Json addSubscriber();
+
+  /**
+   * Update tables to remove the node, including all of its publishers and subscribers. Close the rpc connection to that
+   * node. Removal of connections between publishers and subscribers is handled by Nodes internally as
+   * BsonMessageSockets throw PeerClosedException when a peer node closes its connections on shutdown. Called by Nodes
+   * when they are terminated locally via closing callback, by the Mediator when it is terminated, or potentially by
+   * other nodes.
+   */
+  void removeNode();
+
+  /** Request functions **/
+
+  /**
+   * Request that a node connect all of its subscribers of a specified topic to a list of publisher address:port pairs.
+   * The receiving node handles adding these additional connections and ignores address:port pairs to which a given
+   * subscriber is already connected. Called from within addPublisher() and addSubscriber().
+   */
+  void connectNodeToPublishers();
+
+  /** Json decode function wrappers **/
+
+  /**
+   * Json parsing wrapper for addPublisher() to allow registration.
+   */
+  void jsonAddNodeCallback(Json const &json);
+  void jsonAddPublisherCallback(Json const &json);
+  Json jsonAddSubscriberCallback(Json const &json);
+  void jsonRemoveNodeCallback(Json const &json);
+  void jsonConnectNodeToPublishers(Json const &json);
+
+  const TopicData getTopicData(const TopicName& topic_name);
+  const NodeData getNodeData(const NodeURI& node_uri);
+
+  std::unordered_map<TopicName, TopicData> topic_table_;
+  std::unordered_map<NodeURI, NodeData> node_table_;
+  std::mutex topic_table_mutex_;
+  std::mutex node_table_mutex_;
+
+  std::string address_;
+  int port_;
+  MROS &mros_;
+  Logger &logger_;
+  std::unique_ptr<ServerSocket> bson_rpc_server_;
+};
