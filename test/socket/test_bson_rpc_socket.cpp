@@ -2,8 +2,8 @@
 
 #include <thread>
 
-#include "socket/rpc_socket/client_rpc_socket.hpp"
-#include "socket/rpc_socket/connection_rpc_socket.hpp"
+#include "socket/bson_rpc_socket/client_bson_rpc_socket.hpp"
+#include "socket/bson_rpc_socket/connection_bson_rpc_socket.hpp"
 #include "socket/server_socket.hpp"
 
 /**
@@ -15,8 +15,14 @@ class RPCSocketTest : public testing::Test {
    * Initialize the server and client sockets.
    */
   void SetUp() {
+    // Set up complex Json message object to send.
+    kRequestCallback1CorrectRequest_["message"] = "correct for request callback 1";
+    kRequestCallback1CorrectRequest_["ports"] = {12, 13, 14, 15, 16};
+    kRequestCallback1CorrectRequest_["Node URI's"] = {"456t6h", "bghwifiut738", "bgyi7766u", "jbhi67879uo", "hji786wu"};
+
+    // Set up client and server sockets.
     server_socket_ = std::make_shared<ServerSocket>(kDomain_, kServerAddress_, kServerPort_, kBacklogSize_);
-    client_rpc_socket_ = std::make_shared<ClientRPCSocket>(kDomain_, kServerAddress_, kServerPort_);
+    client_rpc_socket_ = std::make_shared<ClientBsonRPCSocket>(kDomain_, kServerAddress_, kServerPort_);
   }
 
   /**
@@ -28,8 +34,8 @@ class RPCSocketTest : public testing::Test {
    * Shared pointers to three sockets for testing.
    */
   std::shared_ptr<ServerSocket> server_socket_;
-  std::shared_ptr<ClientRPCSocket> client_rpc_socket_;
-  std::shared_ptr<ConnectionRPCSocket> connection_rpc_socket_;
+  std::shared_ptr<ClientBsonRPCSocket> client_rpc_socket_;
+  std::shared_ptr<ConnectionBsonRPCSocket> connection_rpc_socket_;
 
   /**
    * Setup parameters for sockets.
@@ -57,11 +63,9 @@ class RPCSocketTest : public testing::Test {
    * Accept a connection on the server, retrying until success in case the client is not setup yet.
    */
   void acceptConnection() {
-    std::optional<std::shared_ptr<ConnectionRPCSocket>> optional_connection_rpc_socket;
-    do {
-      optional_connection_rpc_socket = server_socket_->acceptConnection<ConnectionRPCSocket>();
-    } while (!optional_connection_rpc_socket);
-    connection_rpc_socket_ = *optional_connection_rpc_socket;
+    while (!connection_rpc_socket_) {
+      connection_rpc_socket_ = server_socket_->acceptConnection<ConnectionBsonRPCSocket>();
+    }
   }
 
   /** TESTING FUNCTIONS **/
@@ -69,7 +73,7 @@ class RPCSocketTest : public testing::Test {
    * Client process for RequestConnectionSend test.
    */
   void requestConnectionSendClient() {
-    RequestCallback callback = [this](std::string input)-> void { requestCallback1(input); };
+    RequestCallbackJson callback = [this](json const &input)-> void { requestCallback1(input); };
     client_rpc_socket_->registerRequestCallback("requestCallback1", callback);
     connectClient();
   }
@@ -98,7 +102,7 @@ class RPCSocketTest : public testing::Test {
    */
   void requestClientSendServer() {
     acceptConnection();
-    RequestCallback callback = [this](std::string input) -> void { requestCallback1(input); };
+    RequestCallbackJson callback = [this](json const &input) -> void { requestCallback1(input); };
     connection_rpc_socket_->registerRequestCallback("requestCallback1", callback);
     connection_rpc_socket_->startConnection();
   }
@@ -107,7 +111,7 @@ class RPCSocketTest : public testing::Test {
    * Client process for RequestResponse test.
    */
   void requestResponseClient() {
-    RequestResponseCallback callback = [this](std::string input) -> std::string { return requestResponseCallback1(std::move(input));};
+    RequestResponseCallbackJson callback = [this](json const &input) -> json { return requestResponseCallback1(std::move(input));};
     client_rpc_socket_->registerRequestResponseCallback("requestResponseCallback1", callback);
     connectClient();
   }
@@ -117,7 +121,7 @@ class RPCSocketTest : public testing::Test {
    */
   void requestResponseServer() {
     acceptConnection();
-    RequestCallback callback = [this](std::string input) -> void { requestCallback1(input); };
+    RequestCallbackJson callback = [this](json const &input) -> void { requestCallback1(input); };
     connection_rpc_socket_->registerRequestCallback("requestCallback1", callback);
     connection_rpc_socket_->startConnection();
     connection_rpc_socket_->sendRequestAndGetResponse("requestResponseCallback1", kRequestCallback1CorrectRequest_, "requestCallback1");
@@ -149,11 +153,11 @@ class RPCSocketTest : public testing::Test {
    * Assert that the data sent to this callback is the same as the stored correct value and increment the call counter
    * for this function.
    */
-  void requestCallback1(std::string& string) {
-    ASSERT_EQ(string, kRequestCallback1CorrectRequest_);
+  void requestCallback1(json const& message) {
+    ASSERT_EQ(message, kRequestCallback1CorrectRequest_);
     ++requestCallback1Count_;
   }
-  const std::string kRequestCallback1CorrectRequest_ = "correct for request callback 1";
+  json kRequestCallback1CorrectRequest_;
 
   /**
    * Call counter for the above function.
@@ -163,9 +167,9 @@ class RPCSocketTest : public testing::Test {
   /**
    * Return the input value and increment the call counter for this function.
    */
-  std::string requestResponseCallback1(std::string string) {
+  json requestResponseCallback1(json const& message) {
     ++requestResponseCallback1Count_;
-    return string;
+    return message;
   }
 
   /**

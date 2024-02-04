@@ -127,11 +127,11 @@ target_link_libraries(mros_socket PUBLIC log4cxx)
 #
 # ---------------------------- Automated Unit Tests ----------------------------
 enable_testing()
-add_executable(test_bson_socket test/socket/bson_socket/test_bson_socket.cpp)
+add_executable(test_bson_socket test/socket/test_bson_socket.cpp)
 target_link_libraries(test_bson_socket GTest::gtest_main mros_socket)
 gtest_discover_tests(test_bson_socket)
 
-add_executable(test_bson_rpc_socket test/socket/bson_rpc_socket/test_bson_rpc_socket.cpp)
+add_executable(test_bson_rpc_socket test/socket/test_bson_rpc_socket.cpp)
 target_link_libraries(test_bson_rpc_socket PUBLIC GTest::gtest_main mros_socket)
 gtest_discover_tests(test_bson_rpc_socket)
 
