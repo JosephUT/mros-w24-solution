@@ -3,7 +3,7 @@
 ## Mediator
 
 ### addNode()
-- connecting callback
+- connecting callback registered before starting connection
 
 ### addPublisher()
 - called by create publisher
@@ -19,3 +19,4 @@
 ## Node
 
 ### connectToPublishers()
+- makes call to publisher internally

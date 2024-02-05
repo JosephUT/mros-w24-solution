@@ -1,76 +1,30 @@
 #include "mros/node.hpp"
 
-Node::Node(const std::string &node_name) : logger_(Logger::getLogger()), core_(MROS::getMROS()) {
-    LogContext context("Node::Node");
-    logger_.debug("Initializing Node");
-    core_.registerHandler();
+Node::Node(const std::string &node_name) : logger_(Logger::getLogger()), core_(MROS::getMROS()), node_name_(node_name) {
+  LogContext context("Node::Node");
+  // Set up the client rpc socket with the Mediator server address.
 
-    logger_.debug("Node constructor complete");
+  // Get host:port of the client rpc socket and resolve it to the node URI.
+
+  // Make connecting json message with node_uri and node_name.
+
+  // Connect to the Mediator and start the rpc.
+
+  // Spin off a thread to check for the two possible shutdown signals: status turning false, and the client being closed.
+  shutdown_sentinel_ = std::thread(&Node::checkStatusAndHandleShutdown, this);
 }
 
-Node::~Node() {
-    LogContext context("~Node");
-    logger_.debug("Cleaning up");
+Node::~Node() {}
 
-    // for(auto &pub : pubs_) {
-    //     if(auto ptr = pub.lock()) {
-    //         ptr->~PublisherBase();
-    //     }
-    // }
-    // for (auto &sub : subs_) {
-    //     if (auto ptr = sub.lock()) {
-    //         ptr->~SubscriberBase();
-    //     }
-    // }
-    // logger_.debug("Pubs and Subs cleaned up");
+void Node::close() {
 
-    logger_.debug("Node destructor complete");
 }
 
-bool Node::status() const {
-    return core_.status();
-}
-
-void Node::spin() {
-    LogContext context("Node::spin()");
-    logger_.debug("spinning");
-
-    std::vector<std::thread> threadPool_;
-
-    for (auto &sub : subs_) {
-        if (auto ptr = sub.lock()) {
-            threadPool_.emplace_back([ptr]() {ptr->spin();});
-        }
-    }
-
-    while(status());
-    
-    logger_.debug("Joining spin threads");
-
-    for(auto &thread : threadPool_) {
-        thread.join();
-    }
-
-    logger_.debug("Exiting spin");
-}
-
-void Node::spinOnce() {
-    LogContext context("Node::spinOnce()");
-    logger_.debug("Spinning once");
-
-    std::vector<std::thread> threadPool_;
-
-    for(auto &sub : subs_) {
-        if(auto ptr = sub.lock()) {
-            threadPool_.emplace_back([ptr]() {ptr->spinOnce();});        
-        }
-    }
-    logger_.debug("Joining spinOnce threads");
-
-    for(auto &thread : threadPool_) {
-        thread.join();
-    }
-    // std::this_thread::sleep_for(100ms);
-
-    logger_.debug("Exiting spinOnce");
+void Node::checkStatusAndHandleShutdown() {
+  // TODO: Make this just wait on a condition variable. Should be signaled by at least MROS, closing callback, and user close().
+  while (status() && bson_rpc_client_->connected()) {
+    std::this_thread::sleep_for(10ms);
+  }
+  if (bson_rpc_client_->connected()) bson_rpc_client_->close();
+  // TODO: Close all owned publishers and subscribers.
 }

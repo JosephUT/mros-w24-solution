@@ -61,8 +61,8 @@ class Mediator : public std::enable_shared_from_this<Mediator> {
   /** Callback functions **/
 
   /**
- * Update node_table_ to add node. Use the pending_connection_ as the pointer to the connection socket for this node.
- * Nodes request this callback immediately after their connection is accepted.
+   * Update node_table_ to add node. Use the pending_connection_ as the pointer to the connection socket for this node.
+   * Nodes request this callback immediately after their connection is accepted.
    */
   void addNode(const NodeURI &node_uri, const std::string node_name);
 

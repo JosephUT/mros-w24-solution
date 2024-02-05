@@ -1,5 +1,4 @@
-#ifndef MROS_W24_SOLUTION_NODE_HPP
-#define MROS_W24_SOLUTION_NODE_HPP
+#pragma once
 
 #include <chrono>
 #include <functional>
@@ -13,54 +12,43 @@
 #include "mros/mros.hpp"
 #include "mros/publisher.hpp"
 #include "mros/subscriber.hpp"
+#include "socket/bson_rpc_socket/client_bson_rpc_socket.hpp"
 
 using namespace std::chrono_literals;
 
 class Node : public std::enable_shared_from_this<Node> {
  public:
-
+  /**
+   * Set up the node's rpc connection to the mediator and then start the sentinel thread.
+   */
   explicit Node(std::string const &node_name);
 
+  /**
+   * Set the is_shutdown flag to true and then join the sentinel thread.
+   */
   ~Node();
 
-  template <typename MessageT, typename CallbackT = void (*)(MessageT), typename SubscriberT = Subscriber<MessageT>>
-  std::shared_ptr<SubscriberT> create_subscriber(std::string topic_name, std::uint32_t queue_size,
-                                                 CallbackT &&callback);
-
-  template <typename MessageT, typename PublisherT = Publisher<MessageT>>
-  std::shared_ptr<PublisherT> create_publisher(std::string topic_name, uint32_t queue_size);
-
-  void spin();
-
-  void spinOnce();
-
-  bool status() const;
+  /**
+   * Close the rpc connection. Once the rpc is closed, the shutdown sentinel will complete the shutdown sequence.
+   */
+  void close();
 
  private:
-  std::string node_name_;
+  /**
+   * Get the status of the mediator.
+   */
+  bool status() const { return core_.status(); }
+
+  /**
+   * Check that the status is true and the rpc socket is connected.
+   */
+  void checkStatusAndHandleShutdown();
+
+  std::unique_ptr<ClientBsonRPCSocket> bson_rpc_client_;
+
+  std::thread shutdown_sentinel_;
 
   Logger &logger_;
   MROS &core_;
-
-  std::vector<std::weak_ptr<SubscriberBase>> subs_;
-  std::vector<std::weak_ptr<PublisherBase>> pubs_;
-  // std::vector<std::thread> threadPool_;
+  std::string node_name_;
 };
-
-template <typename MessageT, typename PublisherT>
-std::shared_ptr<PublisherT> Node::create_publisher(std::string topic_name, uint32_t queue_size) {
-  auto temp = std::make_shared<PublisherT>(shared_from_this(), std::move(topic_name), queue_size);
-  pubs_.push_back(temp);
-  return temp;
-}
-
-template <typename MessageT, typename CallbackT, typename SubscriberT>
-std::shared_ptr<SubscriberT> Node::create_subscriber(std::string topic_name, std::uint32_t queue_size,
-                                                     CallbackT &&callback) {
-  std::function<void(MessageT)> callbackFunc(callback);
-  auto temp =
-      std::make_shared<SubscriberT>(shared_from_this(), std::move(topic_name), queue_size, std::move(callbackFunc));
-  subs_.push_back(temp);
-  return temp;
-}
-#endif  // MROS_W24_SOLUTION_NODE_HPP
