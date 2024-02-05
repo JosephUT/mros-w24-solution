@@ -9,9 +9,13 @@ using namespace nlohmann;
 ClientBsonRPCSocket::ClientBsonRPCSocket(int domain, const std::string &server_address, int port)
     : ClientSocket(domain, server_address, port) {}
 
-void ClientBsonRPCSocket::connectToServer(int timeout) {
+void ClientBsonRPCSocket::connectToServer(json const &connection_message, int timeout) {
   ClientSocket::connect();
   waitForConnectionAndReceive(timeout);
+  is_connected_ = true;
+  sendMessage(connection_message);
+  json all_clear = receiveMessage();
+  ClientBsonRPCSocket::startReceiveCycle();
 }
 
 void ClientBsonRPCSocket::waitForConnectionAndReceive(int timeout) {
@@ -22,10 +26,8 @@ void ClientBsonRPCSocket::waitForConnectionAndReceive(int timeout) {
   int poll_result = poll(&poll_set, poll_set_count, timeout);
   if (poll_result == 1) {
     // Read out connection message from peer once available, then start receiving thread.
-    json connection_message = receiveMessage();
+    json acknowledgement = receiveMessage();
     logger_.debug("Connection message received");
-    is_connected_ = true;
-    ClientBsonRPCSocket::startReceiveCycle();
   } else {
     throw SocketException("Timed out waiting for connection message");
   }

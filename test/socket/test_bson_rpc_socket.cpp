@@ -15,10 +15,11 @@ class RPCSocketTest : public testing::Test {
    * Initialize the server and client sockets.
    */
   void SetUp() {
-    // Set up complex Json message object to send.
+    // Set up complex Json message objects to send.
     kRequestCallback1CorrectRequest_["message"] = "correct for request callback 1";
     kRequestCallback1CorrectRequest_["ports"] = {12, 13, 14, 15, 16};
     kRequestCallback1CorrectRequest_["Node URI's"] = {"456t6h", "bghwifiut738", "bgyi7766u", "jbhi67879uo", "hji786wu"};
+    kConnectingCallback1CorrectMessage_["message"] = "Node URI?";
 
     // Set up client and server sockets.
     server_socket_ = std::make_shared<ServerSocket>(kDomain_, kServerAddress_, kServerPort_, kBacklogSize_);
@@ -54,7 +55,7 @@ class RPCSocketTest : public testing::Test {
       try {
         client_rpc_socket_->connectToServer();
         break;
-      } catch (SocketException& error) {
+      } catch (SocketException &error) {
       }
     }
   }
@@ -73,7 +74,7 @@ class RPCSocketTest : public testing::Test {
    * Client process for RequestConnectionSend test.
    */
   void requestConnectionSendClient() {
-    RequestCallbackJson callback = [this](json const &input)-> void { requestCallback1(input); };
+    RequestCallbackJson callback = [this](json const &input) -> void { requestCallback1(input); };
     client_rpc_socket_->registerRequestCallback("requestCallback1", callback);
     connectClient();
   }
@@ -111,7 +112,9 @@ class RPCSocketTest : public testing::Test {
    * Client process for RequestResponse test.
    */
   void requestResponseClient() {
-    RequestResponseCallbackJson callback = [this](json const &input) -> json { return requestResponseCallback1(std::move(input));};
+    RequestResponseCallbackJson callback = [this](json const &input) -> json {
+      return requestResponseCallback1(std::move(input));
+    };
     client_rpc_socket_->registerRequestResponseCallback("requestResponseCallback1", callback);
     connectClient();
   }
@@ -124,7 +127,26 @@ class RPCSocketTest : public testing::Test {
     RequestCallbackJson callback = [this](json const &input) -> void { requestCallback1(input); };
     connection_rpc_socket_->registerRequestCallback("requestCallback1", callback);
     connection_rpc_socket_->startConnection();
-    connection_rpc_socket_->sendRequestAndGetResponse("requestResponseCallback1", kRequestCallback1CorrectRequest_, "requestCallback1");
+    connection_rpc_socket_->sendRequestAndGetResponse("requestResponseCallback1", kRequestCallback1CorrectRequest_,
+                                                      "requestCallback1");
+    connection_rpc_socket_->close();
+  }
+
+  /**
+   * Client process for ConnectingCallback test.
+   */
+  void connectingCallbackClient() {
+    client_rpc_socket_->connectToServer(kConnectingCallback1CorrectMessage_);
+  }
+
+  /**
+   * Server process for ConnectingCallback test.
+   */
+  void connectingCallbackServer() {
+    acceptConnection();
+    RequestCallbackJson callback = [this](json const &input) -> void { connectingCallback1(input); };
+    connection_rpc_socket_->registerConnectingCallback(callback);
+    connection_rpc_socket_->startConnection();
     connection_rpc_socket_->close();
   }
 
@@ -132,7 +154,7 @@ class RPCSocketTest : public testing::Test {
    * Client process for ClosingCallback test.
    */
   void closingCallbackClient() {
-    ClosingCallback callback = [this] () -> void {closingCallback1();};
+    ClosingCallback callback = [this]() -> void { closingCallback1(); };
     client_rpc_socket_->registerClosingCallback(callback);
     client_rpc_socket_->connectToServer();
   }
@@ -142,7 +164,7 @@ class RPCSocketTest : public testing::Test {
    */
   void closingCallbackServer() {
     acceptConnection();
-    ClosingCallback callback = [this] () -> void {closingCallback1();};
+    ClosingCallback callback = [this]() -> void { closingCallback1(); };
     connection_rpc_socket_->registerClosingCallback(callback);
     connection_rpc_socket_->startConnection();
     connection_rpc_socket_->close();
@@ -153,7 +175,7 @@ class RPCSocketTest : public testing::Test {
    * Assert that the data sent to this callback is the same as the stored correct value and increment the call counter
    * for this function.
    */
-  void requestCallback1(json const& message) {
+  void requestCallback1(json const &message) {
     ASSERT_EQ(message, kRequestCallback1CorrectRequest_);
     ++requestCallback1Count_;
   }
@@ -167,7 +189,7 @@ class RPCSocketTest : public testing::Test {
   /**
    * Return the input value and increment the call counter for this function.
    */
-  json requestResponseCallback1(json const& message) {
+  json requestResponseCallback1(json const &message) {
     ++requestResponseCallback1Count_;
     return message;
   }
@@ -180,9 +202,21 @@ class RPCSocketTest : public testing::Test {
   /**
    * Increment the counter for this function.
    */
-  void closingCallback1() {
-    ++closingCallback1Count_;
+  void connectingCallback1(json const& message) {
+    ASSERT_EQ(message, kConnectingCallback1CorrectMessage_);
+    ++connectingCallback1Count_;
   }
+  json kConnectingCallback1CorrectMessage_;
+
+  /**
+   * Call counter for the above function.
+   */
+  int connectingCallback1Count_ = 0;
+
+  /**
+   * Increment the counter for this function.
+   */
+  void closingCallback1() { ++closingCallback1Count_; }
 
   /**
    * Call counter for the above function.
@@ -226,6 +260,17 @@ TEST_F(RPCSocketTest, RequestResponse) {
   server_thread.join();
   ASSERT_EQ(requestCallback1Count_, 1);
   ASSERT_EQ(requestResponseCallback1Count_, 1);
+}
+
+/**
+ * Test if closing callbacks are called on close().
+ */
+TEST_F(RPCSocketTest, ConnectingCallback) {
+  std::thread client_thread(&RPCSocketTest::connectingCallbackClient, this);
+  std::thread server_thread(&RPCSocketTest::connectingCallbackServer, this);
+  client_thread.join();
+  server_thread.join();
+  ASSERT_EQ(connectingCallback1Count_, 1);
 }
 
 /**

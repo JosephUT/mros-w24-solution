@@ -1,9 +1,8 @@
-#ifndef MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP
-#define MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP
+#pragma once
 
 #include "socket/bson_rpc_socket/bson_rpc_socket.hpp"
 #include "socket/client_socket.hpp"
-// TODO: Change from Message Socket
+
 /**
  * Class combining string rpc functionality with client style socket initialization.
  */
@@ -24,11 +23,13 @@ class ClientBsonRPCSocket : virtual public ClientSocket, virtual public BsonRPCS
   ~ClientBsonRPCSocket() override = default;
 
   /**
-   * Connects to the server socket. Waits indefinitely for the resulting connection socket to
-   * @param timeout Time to wait for a connection message  from the connection socket before throwing an exception in
+   * Connects to the server socket. Waits for the resulting connection socket to call startConnection().
+   * @param timeout Time to wait for a connection message from the connection socket before throwing an exception in
    * milliseconds. Defaults to an indefinite timeout.
+   * @param connection_message Json message to send to the connection socket. Used to invoke the connecting callback of
+   * the connection socket if one is registered.
    */
-  void connectToServer(int timeout = -1);
+  void connectToServer(json const &connection_message = json({{"message", "connecting"}}), int timeout = -1);
 
  protected:
   /**
@@ -45,5 +46,3 @@ class ClientBsonRPCSocket : virtual public ClientSocket, virtual public BsonRPCS
 
   std::thread setup_thread_;
 };
-
-#endif  // MROS_W24_SOLUTION_CLIENT_JSON_RPC_SOCKET_HPP

@@ -49,22 +49,6 @@ target_link_libraries(mros_socket PUBLIC log4cxx)
 #)
 #
 # ---------------------------- Command Line Executables ----------------------------
-# add_executable(mroscore
-#         src/logging/logging.cpp
-#         src/mediator/mediator.cpp
-#         src/mros/mros.cpp
-#         ${SOCKET_SOURCES}
-# )
-# target_include_directories(mroscore
-#         PRIVATE
-#         include
-# )
-# target_link_libraries(mroscore
-#         PRIVATE
-#         nlohmann_json::nlohmann_json
-#         log4cxx
-#         EXPAT::EXPAT
-# )
 #
 # add_executable(mroskill
 #         src/command_line/mroskill.cpp
@@ -127,12 +111,16 @@ target_link_libraries(mros_socket PUBLIC log4cxx)
 #
 # ---------------------------- Automated Unit Tests ----------------------------
 enable_testing()
+add_executable(test_mediator test/mediator/test_mediator.cpp src/mediator/mediator.cpp src/mros/mros.cpp)
+target_link_libraries(test_mediator GTest::gtest_main mros_socket)
+gtest_discover_tests(test_mediator)
+
 add_executable(test_bson_socket test/socket/test_bson_socket.cpp)
 target_link_libraries(test_bson_socket GTest::gtest_main mros_socket)
 gtest_discover_tests(test_bson_socket)
 
 add_executable(test_bson_rpc_socket test/socket/test_bson_rpc_socket.cpp)
-target_link_libraries(test_bson_rpc_socket PUBLIC GTest::gtest_main mros_socket)
+target_link_libraries(test_bson_rpc_socket GTest::gtest_main mros_socket)
 gtest_discover_tests(test_bson_rpc_socket)
 
 # ---------------------------- Manual Unit Tests ----------------------------

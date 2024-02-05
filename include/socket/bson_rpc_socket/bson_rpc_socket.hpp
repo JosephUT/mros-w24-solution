@@ -1,5 +1,4 @@
-#ifndef MROS_W24_SOLUTION_JSON_RPC_SOCKET_HPP
-#define MROS_W24_SOLUTION_JSON_RPC_SOCKET_HPP
+#pragma once
 
 #include <atomic>
 #include <condition_variable>
@@ -207,5 +206,3 @@ class BsonRPCSocket : virtual public BsonSocket {
    */
   static constexpr const std::uint8_t kParameterDelimiter_ = '%';
 };
-
-#endif  // MROS_W24_SOLUTION_JSON_RPC_SOCKET_HPP

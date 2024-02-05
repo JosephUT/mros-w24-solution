@@ -1,8 +1,7 @@
-#include <iostream>
+#include <gtest/gtest.h>
+
 #include "mediator/mediator.hpp"
 
-int main(int argc, char** argv) {
-    auto main = std::make_shared<Mediator>(argc, argv);
-    main->spin();
-    return 0;
+TEST(Mediator, TestBasic) {
+  ASSERT_TRUE(true);
 }

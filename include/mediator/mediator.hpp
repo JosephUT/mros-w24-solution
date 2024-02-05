@@ -27,8 +27,8 @@ struct AddressPort {
 };
 
 struct TopicData {
-  std::vector<NodeURI> publishing_nodes;
-  std::vector<NodeURI> subscribing_nodes;
+  std::unordered_set<NodeURI> publishing_nodes;
+  std::unordered_set<NodeURI> subscribing_nodes;
 };
 
 struct NodeData {
@@ -61,21 +61,22 @@ class Mediator : public std::enable_shared_from_this<Mediator> {
   /** Callback functions **/
 
   /**
-   * Update node_table_ to add node. Nodes request this callback immediately after their connection is accepted.
+ * Update node_table_ to add node. Use the pending_connection_ as the pointer to the connection socket for this node.
+ * Nodes request this callback immediately after their connection is accepted.
    */
-  void addNode();
+  void addNode(const NodeURI &node_uri, const std::string node_name);
 
   /**
    * Update tables to add publisher. Requests that all subscribing nodes connect to the new publisher. Nodes request
    * this callback when the user creates a publisher.
    */
-  void addPublisher();
+  void addPublisher(const NodeURI &node_uri, const TopicName &topic_name, const AddressPort &address_port);
 
   /**
    * Update tables to add subscriber. Requests that the calling node connect to all the existing publishers. Nodes
    * request this callback when the user creates a subscriber.
    */
-  Json addSubscriber();
+  Json addSubscriber(const NodeURI &node_uri, const TopicName &topic_name);
 
   /**
    * Update tables to remove the node, including all of its publishers and subscribers. Close the rpc connection to that
@@ -84,39 +85,43 @@ class Mediator : public std::enable_shared_from_this<Mediator> {
    * when they are terminated locally via closing callback, by the Mediator when it is terminated, or potentially by
    * other nodes.
    */
-  void removeNode();
-
-  /** Request functions **/
-
-  /**
-   * Request that a node connect all of its subscribers of a specified topic to a list of publisher address:port pairs.
-   * The receiving node handles adding these additional connections and ignores address:port pairs to which a given
-   * subscriber is already connected. Called from within addPublisher() and addSubscriber().
-   */
-  void connectNodeToPublishers();
+  void removeNode(const NodeURI &node_uri);
 
   /** Json decode function wrappers **/
 
   /**
-   * Json parsing wrapper for addPublisher() to allow registration.
+   * Json parsing wrapper for addNode() to allow registration as a callback.
    */
   void jsonAddNodeCallback(Json const &json);
-  void jsonAddPublisherCallback(Json const &json);
-  Json jsonAddSubscriberCallback(Json const &json);
-  void jsonRemoveNodeCallback(Json const &json);
-  void jsonConnectNodeToPublishers(Json const &json);
 
-  const TopicData getTopicData(const TopicName& topic_name);
-  const NodeData getNodeData(const NodeURI& node_uri);
+  /**
+   * Json parsing wrapper for addPublisher() to allow registration as a callback.
+   */
+  void jsonAddPublisherCallback(Json const &json);
+
+  /**
+   * Json parsing wrapper for addSubscriber() to allow registration as a callback.
+   */
+  Json jsonAddSubscriberCallback(Json const &json);
+
+  /**
+   * Json parsing wrapper for removeNode() to allow registration as a callback.
+   */
+  void jsonRemoveNodeCallback(Json const &json);
+
+  const TopicData getTopicData(const TopicName &topic_name);
+  const NodeData getNodeData(const NodeURI &node_uri);
 
   std::unordered_map<TopicName, TopicData> topic_table_;
   std::unordered_map<NodeURI, NodeData> node_table_;
   std::mutex topic_table_mutex_;
   std::mutex node_table_mutex_;
 
+  std::unique_ptr<ServerSocket> bson_rpc_server_;
+  std::shared_ptr<ConnectionBsonRPCSocket> pending_connection_;
+
   std::string address_;
   int port_;
   MROS &mros_;
   Logger &logger_;
-  std::unique_ptr<ServerSocket> bson_rpc_server_;
 };
