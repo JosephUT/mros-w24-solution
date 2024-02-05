@@ -49,7 +49,8 @@ target_link_libraries(mros_socket PUBLIC log4cxx)
 #)
 #
 # ---------------------------- Command Line Executables ----------------------------
-#
+add_executable(mroscore src/command_line/mroscore.cpp src/mediator/mediator.cpp src/mros/mros.cpp)
+target_link_libraries(mroscore mros_socket)
 # add_executable(mroskill
 #         src/command_line/mroskill.cpp
 #         src/logging/logging.cpp

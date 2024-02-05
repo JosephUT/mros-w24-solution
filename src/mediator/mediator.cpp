@@ -1,16 +1,11 @@
 #include "mediator/mediator.hpp"
 
-//---------------------------------------------Mediator--------------------------------------
-
 Mediator::Mediator() : Mediator("127.0.0.1", 13330) {}
 
 Mediator::Mediator(std::string address, int port)
     : address_(std::move(address)), port_(port), mros_(MROS::getMROS()), logger_(Logger::getLogger()) {
-  LogContext context("Mediator::Mediator");
-
   // Initialize the server and begin accepting connections.
   bson_rpc_server_ = std::make_unique<ServerSocket>(AF_INET, address_, port_, 100);
-  logger_.debug("Mediator initialized");
   handleRPCConnections();
 }
 
@@ -18,8 +13,6 @@ Mediator::~Mediator() {}
 
 void Mediator::handleRPCConnections() {
   LogContext context("Mediator::handleRPCConnections");
-  logger_.debug("Starting handleRPCConnections");
-
   // Check that the mediator has not been killed.
   while (status()) {
     // Attempt to accept a new connection, which is non-blocking.
@@ -40,6 +33,7 @@ void Mediator::handleRPCConnections() {
   // Close the rpc server. Now no new connections can be set up.
   bson_rpc_server_->close();
   node_table_mutex_.lock();
+
   // Close the rpc connections to each node. Closing the rpc invokes the shutdown routine of each node via closing
   // callback.
   for (auto const &uri_node_data_it : node_table_) {
@@ -47,19 +41,13 @@ void Mediator::handleRPCConnections() {
   }
   node_table_.clear();
   node_table_mutex_.unlock();
-
-  // TODO: The data in the topic table is wrong for any other threads that run here. Could lock both tables, but might
-  // cause deadlock.
   topic_table_mutex_.lock();
   topic_table_.clear();
   topic_table_mutex_.unlock();
 }
 
-/**
- * Update node_table_ to add node. Use the pending_connection_ as the pointer to the connection socket for this node.
- * Nodes request this callback immediately after their connection is accepted.
- */
 void Mediator::addNode(const NodeURI &node_uri, const std::string node_name) {
+  LogContext context("Mediator::addNode");
   // Update the node table using pending_socket_ as the connection socket, since this is only set by the main thread.
   node_table_mutex_.lock();
   node_table_[node_uri] = NodeData{node_name, pending_connection_, {}, {}};
@@ -81,35 +69,33 @@ void Mediator::addNode(const NodeURI &node_uri, const std::string node_name) {
 
   // Register a removeNode closing callback that automatically inserts this node's URI.
   pending_connection_->registerClosingCallback([this, node_uri]() -> void { removeNode(node_uri); });
+  logger_.info("Added Node");
 }
 
-/**
- * Update tables to add publisher. Requests that all subscribing nodes connect to the new publisher. Nodes request
- * this callback when the user creates a publisher.
- */
 void Mediator::addPublisher(const NodeURI &node_uri, const TopicName &topic_name, const AddressPort &address_port) {
-  // Update node table.
-  node_table_mutex_.lock();
-  node_table_[node_uri].publisher_data_by_topic[topic_name].push_back(address_port);
-  node_table_mutex_.unlock();
-
-  // Update topic table and notify subscribing nodes of new publisher.
+  LogContext context("Mediator::addPublisher");
+  // Update topic table.
   topic_table_mutex_.lock();
   topic_table_[topic_name].publishing_nodes.insert(node_uri);
-  // TODO: Get subscribing node URI's in a vector. After unlocking, go through each URI and tell that node to subscribe
-  // to the new publisher.
+  std::vector<NodeURI> subscriber_uris(topic_table_[topic_name].subscribing_nodes.begin(),
+                                       topic_table_[topic_name].subscribing_nodes.end());
   topic_table_mutex_.unlock();
-  //  for (auto const &subscribing_node_uri : topic_table_[topic_name].subscribing_nodes) {
-  //
-  //    connectNodeToPublishers(subscribing_node_uri, {address_port});
-  //  }
+
+  // Update node table and notify subscribing nodes of new publisher.
+  node_table_mutex_.lock();
+  node_table_[node_uri].publisher_data_by_topic[topic_name].push_back(address_port);
+  for (auto const &subscriber_uri : subscriber_uris) {
+    node_table_[subscriber_uri].connection->sendRequest("connectToPublishers",
+                                                        {{"topic", topic_name},
+                                                         {"publisher_addresses", {address_port.host}},
+                                                         {"publisher_ports", {address_port.port}}});
+  }
+  node_table_mutex_.unlock();
+  logger_.info("Added Publisher");
 }
 
-/**
- * Update tables to add subscriber. Returns a json with all the publisher addresses and ports to connect to. Nodes
- * request this callback when the user creates a subscriber.
- */
 Json Mediator::addSubscriber(const NodeURI &node_uri, const TopicName &topic_name) {
+  LogContext context("Mediator::addSubscriber");
   // Update node table.
   node_table_mutex_.lock();
   node_table_[node_uri].subscriber_data_by_topic[topic_name]++;
@@ -131,17 +117,12 @@ Json Mediator::addSubscriber(const NodeURI &node_uri, const TopicName &topic_nam
     addresses.emplace_back(address_port.host);
     ports.emplace_back(address_port.port);
   }
-  return json{{"publisher addresses", addresses}, {"publisher ports", ports}};
+  logger_.info("Added Subscriber");
+  return json{{"topic", topic_name}, {"publisher_addresses", addresses}, {"publisher_ports", ports}};
 }
 
-/**
- * Update tables to remove the node, including all of its publishers and subscribers. Close the rpc connection to that
- * node. Removal of connections between publishers and subscribers is handled by Nodes internally as
- * BsonMessageSockets throw PeerClosedException when a peer node closes its connections on shutdown. Called by Nodes
- * when they are terminated locally via closing callback, by the Mediator when it is terminated, or potentially by
- * other nodes.
- */
 void Mediator::removeNode(const NodeURI &node_uri) {
+  LogContext context("Mediator::removeNode");
   topic_table_mutex_.lock();
 
   // For each topic that the node publishes to, get the TopicName and remove this node as a publishing node in
@@ -162,17 +143,40 @@ void Mediator::removeNode(const NodeURI &node_uri) {
   node_table_[node_uri].connection->close();
   node_table_.erase(node_uri);
   node_table_mutex_.unlock();
+  logger_.info("Removed Node");
 }
 
-/** Json decode function wrappers **/
+void Mediator::jsonAddNodeCallback(Json const &json) {
+  NodeURI node_uri = json["node_uri"];
+  std::string node_name = json["node_name"];
+  addNode(node_uri, node_name);
+}
 
-/**
- * Json parsing wrapper for addPublisher() to allow registration.
- */
-void Mediator::jsonAddNodeCallback(Json const &json) {}
-void Mediator::jsonAddPublisherCallback(Json const &json) {}
-Json Mediator::jsonAddSubscriberCallback(Json const &json) { return Json(); }
-void Mediator::jsonRemoveNodeCallback(Json const &json) {}
+void Mediator::jsonAddPublisherCallback(Json const &json) {
+  NodeURI node_uri = json["node_uri"];
+  TopicName topic_name = json["topic_name"];
+  std::string address = json["address"];
+  int port = json["port"];
+  addPublisher(node_uri, topic_name, {address, port});
+}
 
-const TopicData Mediator::getTopicData(const TopicName &topic_name) { return TopicData(); }
-const NodeData Mediator::getNodeData(const NodeURI &node_uri) { return NodeData(); }
+Json Mediator::jsonAddSubscriberCallback(Json const &json) {
+  NodeURI node_uri = json["node_uri"];
+  TopicName topic_name = json["topic_name"];
+  return addSubscriber(node_uri, topic_name);
+}
+
+void Mediator::jsonRemoveNodeCallback(Json const &json) {
+  NodeURI node_uri = json["node_uri"];
+  removeNode(node_uri);
+}
+
+const TopicData Mediator::getTopicData(const TopicName &topic_name) {
+  std::lock_guard<std::mutex> topic_table_guard(topic_table_mutex_);
+  return topic_table_[topic_name];
+}
+
+const NodeData Mediator::getNodeData(const NodeURI &node_uri) {
+  std::lock_guard<std::mutex> node_table_guard(node_table_mutex_);
+  return node_table_[node_uri];
+}
