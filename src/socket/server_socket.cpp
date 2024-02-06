@@ -18,7 +18,7 @@ ServerSocket::ServerSocket(const int domain, const std::string& address, const i
   if (fcntl(file_descriptor_, F_SETFL, flags | O_NONBLOCK) == -1) {
     throw SocketErrnoException("Failed to set socket nonblocking.");
   }
-  int option = 1; // Nonzero value to enable boolean option.
+  int option = 1;  // Nonzero value to enable boolean option.
   if (setsockopt(file_descriptor_, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) == -1) {
     throw SocketErrnoException("Failed to set socket to reuse address.");
   }
@@ -30,14 +30,14 @@ ServerSocket::ServerSocket(const int domain, const std::string& address, const i
   }
 }
 
-ServerSocket::~ServerSocket() {
-  close();
-}
+ServerSocket::~ServerSocket() { close(); }
 
 template <class T>
-std::shared_ptr<T> ServerSocket::acceptConnection() requires std::derived_from<T, ConnectionSocket> {
+std::shared_ptr<T> ServerSocket::acceptConnection()
+  requires std::derived_from<T, ConnectionSocket>
+{
   if (!is_open_) throw SocketException("Cannot accept on close socket.");
-  sockaddr_in client_address = server_address_; // Must assign to avoid issues with accept
+  sockaddr_in client_address = server_address_;  // Must assign to avoid issues with accept
   socklen_t client_address_size = sizeof(client_address);
   int connection_file_descriptor =
       accept(file_descriptor_, reinterpret_cast<struct sockaddr*>(&client_address), &client_address_size);
@@ -49,6 +49,13 @@ std::shared_ptr<T> ServerSocket::acceptConnection() requires std::derived_from<T
     // Throw for other errors.
     throw SocketErrnoException("Failed to accept connection.");
   }
+  std::array<char, INET_ADDRSTRLEN> client_address_buffer;
+  int client_port = ntohs(client_address.sin_port);
+  const char* address_ptr =
+      inet_ntop(AF_INET, &client_address.sin_addr, client_address_buffer.data(), static_cast<size_t>(INET_ADDRSTRLEN));
+  std::string client_address_string(address_ptr);
+  last_client_address_port_ = {client_address_string, client_port};
+
   // Handle appropriate return paths at compile time.
   if constexpr (std::is_same_v<ConnectionSocket, ConnectionBsonSocket>) {
     auto connection = std::make_shared<ConnectionBsonSocket>(connection_file_descriptor);
@@ -73,5 +80,4 @@ void ServerSocket::close() {
 template std::shared_ptr<ConnectionBsonSocket> ServerSocket::acceptConnection<ConnectionBsonSocket>();
 
 // Explicit instantiation to work with BsonRPCSockets.
-template std::shared_ptr<ConnectionBsonRPCSocket> ServerSocket::acceptConnection<
-  ConnectionBsonRPCSocket>();
+template std::shared_ptr<ConnectionBsonRPCSocket> ServerSocket::acceptConnection<ConnectionBsonRPCSocket>();

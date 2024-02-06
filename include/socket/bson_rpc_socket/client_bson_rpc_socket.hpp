@@ -1,5 +1,10 @@
 #pragma once
 
+#include <arpa/inet.h>
+
+#include <array>
+#include <utility>
+
 #include "socket/bson_rpc_socket/bson_rpc_socket.hpp"
 #include "socket/client_socket.hpp"
 

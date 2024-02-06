@@ -54,6 +54,14 @@ class ServerSocket : public Socket {
   std::shared_ptr<T> acceptConnection() requires std::derived_from<T, ConnectionSocket>;
 
   /**
+   * Get the address and port of the last client to connect.
+   * @return A pair containing the client's address and port. Empty if no client has connected.
+   */
+  std::pair<std::string, int> getLastClientAddressPort() {
+    return last_client_address_port_;
+  }
+
+  /**
    * Close the socket's file descriptor if it is not already closed.
    */
   void close();
@@ -68,6 +76,11 @@ class ServerSocket : public Socket {
    * Boolean, true if socket file descriptor is open, false otherwise.
    */
   bool is_open_ = false;
+
+  /**
+   * The address and port of the last connection made.
+   */
+  std::pair<std::string, int> last_client_address_port_;
 };
 
 #endif  // MROS_W24_SOLUTION_SERVER_SOCKET_HPP

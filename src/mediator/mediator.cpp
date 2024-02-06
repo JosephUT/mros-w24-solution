@@ -1,12 +1,19 @@
 #include "mediator/mediator.hpp"
 
+#include <iostream>
+
 Mediator::Mediator() : Mediator("127.0.0.1", 13330) {}
 
 Mediator::Mediator(std::string address, int port)
     : address_(std::move(address)), port_(port), mros_(MROS::getMROS()), logger_(Logger::getLogger()) {
   // Initialize the server and begin accepting connections.
-  bson_rpc_server_ = std::make_unique<ServerSocket>(AF_INET, address_, port_, 100);
-  handleRPCConnections();
+  try {
+    bson_rpc_server_ = std::make_unique<ServerSocket>(AF_INET, address_, port_, 100);
+    handleRPCConnections();
+  } catch (std::exception const &e){
+    logger_.info(e.what());
+    logger_.info("Mroscore is already running. Terminating");
+  }
 }
 
 Mediator::~Mediator() {}
@@ -16,64 +23,70 @@ void Mediator::handleRPCConnections() {
   // Check that the mediator has not been killed.
   while (status()) {
     // Attempt to accept a new connection, which is non-blocking.
-    // TODO: acceptConnection can throw. Catch everything, log or ignore.
     auto connection_socket = bson_rpc_server_->acceptConnection<ConnectionBsonRPCSocket>();
 
     // If a connection was accepted, set up the connection.
     if (connection_socket) {
+      // Get the address and port of the connecting client and resolve it to the node's URI.
+      auto client_address_port = bson_rpc_server_->getLastClientAddressPort();
+      std::string node_uri = toURI(client_address_port.first, client_address_port.second);
+      node_uris_.push_back(node_uri);
+
+      // Register the node's connection in the lookup table.
+      node_table_mutex_.lock();
+      node_table_[node_uri].connection = connection_socket;
+      node_table_mutex_.unlock();
+
       // Register addNode() as the connecting callback and cache the socket pointer so that addNode() can access it.
-      connection_socket->registerConnectingCallback(
-          [this](Json const &json) -> void { return jsonAddNodeCallback(json); });
-      pending_connection_ = connection_socket;
+      connection_socket->registerConnectingCallback([this, node_uri](Json const &input) -> void {
+        json input_with_uri = input;
+        input_with_uri["node_uri"] = node_uri;
+        return jsonAddNodeCallback(input_with_uri);
+      });
+
+      // Register an addPublisher callback that automatically inserts this node's URI.
+      connection_socket->registerRequestCallback("addPublisher", [this, node_uri](json const &input) -> void {
+        json input_with_uri = input;
+        input_with_uri["node_uri"] = node_uri;
+        jsonAddPublisherCallback(input_with_uri);
+      });
+
+      // Register an addSubscriber callback that automatically inserts this node's URI.
+      connection_socket->registerRequestResponseCallback("addSubscriber", [this, node_uri](json const &input) -> json {
+        json input_with_uri = input;
+        input_with_uri["node_uri"] = node_uri;
+        return jsonAddSubscriberCallback(input_with_uri);
+      });
+
+      // Register a removeNode closing callback that automatically inserts this node's URI.
+      connection_socket->registerClosingCallback([this, node_uri]() -> void { removeNode(node_uri); });
 
       // Call addNode() internally to set up the node data and node specific callbacks, then start the connection.
       connection_socket->startConnection();
     }
+    std::this_thread::sleep_for(10ms);
   }
-  // Close the rpc server. Now no new connections can be set up.
+  // Close all connections and clear all data.
   bson_rpc_server_->close();
-  node_table_mutex_.lock();
-
-  // Close the rpc connections to each node. Closing the rpc invokes the shutdown routine of each node via closing
-  // callback.
-  for (auto const &uri_node_data_it : node_table_) {
-    uri_node_data_it.second.connection->close();
-  }
-  node_table_.clear();
-  node_table_mutex_.unlock();
   topic_table_mutex_.lock();
+  // Implicitly close connection sockets by clearing table.
   topic_table_.clear();
   topic_table_mutex_.unlock();
+  node_table_mutex_.lock();
+  node_table_.clear();
+  node_table_mutex_.unlock();
+  logger_.info("Mediator closed");
 }
 
-void Mediator::addNode(const NodeURI &node_uri, const std::string node_name) {
-  LogContext context("Mediator::addNode");
-  // Update the node table using pending_socket_ as the connection socket, since this is only set by the main thread.
-  node_table_mutex_.lock();
-  node_table_[node_uri] = NodeData{node_name, pending_connection_, {}, {}};
-  node_table_mutex_.unlock();
-
-  // Register an addPublisher callback that automatically inserts this node's URI.
-  pending_connection_->registerRequestCallback("addPublisher", [this, node_uri](json const &input) -> void {
-    json input_with_uri = input;
-    input_with_uri["node_uri"] = node_uri;
-    jsonAddPublisherCallback(input_with_uri);
-  });
-
-  // Register an addSubscriber callback that automatically inserts this node's URI.
-  pending_connection_->registerRequestResponseCallback("addSubscriber", [this, node_uri](json const &input) -> json {
-    json input_with_uri = input;
-    input_with_uri["node_uri"] = node_uri;
-    return jsonAddSubscriberCallback(input_with_uri);
-  });
-
-  // Register a removeNode closing callback that automatically inserts this node's URI.
-  pending_connection_->registerClosingCallback([this, node_uri]() -> void { removeNode(node_uri); });
-  logger_.info("Added Node");
+void Mediator::addNode(const NodeURI &node_uri, const std::string &node_name) {
+  // Update the node table with the node's name. The connection should already be registered for this uri.
+  std::lock_guard<std::mutex> node_table_guard(node_table_mutex_);
+  node_table_[node_uri].name = node_name;
+  std::string info = "Added Node " + node_name + " at " + node_uri;
+  logger_.info(info);
 }
 
 void Mediator::addPublisher(const NodeURI &node_uri, const TopicName &topic_name, const AddressPort &address_port) {
-  LogContext context("Mediator::addPublisher");
   // Update topic table.
   topic_table_mutex_.lock();
   topic_table_[topic_name].publishing_nodes.insert(node_uri);
@@ -95,7 +108,6 @@ void Mediator::addPublisher(const NodeURI &node_uri, const TopicName &topic_name
 }
 
 Json Mediator::addSubscriber(const NodeURI &node_uri, const TopicName &topic_name) {
-  LogContext context("Mediator::addSubscriber");
   // Update node table.
   node_table_mutex_.lock();
   node_table_[node_uri].subscriber_data_by_topic[topic_name]++;
@@ -122,11 +134,9 @@ Json Mediator::addSubscriber(const NodeURI &node_uri, const TopicName &topic_nam
 }
 
 void Mediator::removeNode(const NodeURI &node_uri) {
-  LogContext context("Mediator::removeNode");
-  topic_table_mutex_.lock();
-
   // For each topic that the node publishes to, get the TopicName and remove this node as a publishing node in
   // topic_table_.
+  topic_table_mutex_.lock();
   for (const auto &topic_pub_data_it : node_table_[node_uri].publisher_data_by_topic) {
     topic_table_[topic_pub_data_it.first].publishing_nodes.erase(node_uri);
   }
@@ -140,10 +150,11 @@ void Mediator::removeNode(const NodeURI &node_uri) {
 
   // Close the node's connection and remove the node data from node_table_.
   node_table_mutex_.lock();
+  std::string info = "Removed Node " + node_table_[node_uri].name + " at " + node_uri;
   node_table_[node_uri].connection->close();
   node_table_.erase(node_uri);
   node_table_mutex_.unlock();
-  logger_.info("Removed Node");
+  logger_.info(info);
 }
 
 void Mediator::jsonAddNodeCallback(Json const &json) {
@@ -171,12 +182,12 @@ void Mediator::jsonRemoveNodeCallback(Json const &json) {
   removeNode(node_uri);
 }
 
-const TopicData Mediator::getTopicData(const TopicName &topic_name) {
+TopicData Mediator::getTopicData(const TopicName &topic_name) {
   std::lock_guard<std::mutex> topic_table_guard(topic_table_mutex_);
   return topic_table_[topic_name];
 }
 
-const NodeData Mediator::getNodeData(const NodeURI &node_uri) {
+NodeData Mediator::getNodeData(const NodeURI &node_uri) {
   std::lock_guard<std::mutex> node_table_guard(node_table_mutex_);
   return node_table_[node_uri];
 }

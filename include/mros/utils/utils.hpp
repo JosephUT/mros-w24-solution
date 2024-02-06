@@ -1,7 +1,5 @@
-#ifndef MROS_W24_SOLUTION_UTILS_HPP
-#define MROS_W24_SOLUTION_UTILS_HPP
+#pragma once
+
 #include <string>
 
-std::string toURI(std::string host, int port);
-
-#endif //MROS_W24_SOLUTION_UTILS_HPP
+std::string toURI(const std::string &host, int port);

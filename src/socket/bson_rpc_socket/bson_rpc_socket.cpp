@@ -16,7 +16,7 @@ void BsonRPCSocket::close() {
   }
 }
 
-bool BsonRPCSocket::connected() { return is_connected_; }
+bool BsonRPCSocket::connected() { return is_connected_.load(); }
 
 void BsonRPCSocket::sendRequest(CallbackName const &callback_name, json const &callback_argument) {
   json to_send = {{"callback name", callback_name}, {"message", callback_argument}};

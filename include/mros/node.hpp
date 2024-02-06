@@ -29,6 +29,12 @@ class Node : public std::enable_shared_from_this<Node> {
   ~Node();
 
   /**
+   * Get whether the node is connected to the Mediator.
+   * @return True is the node's rpc socket is connected to the Mediator, false oth
+   */
+  bool connected();
+
+  /**
    * Close the rpc connection. Once the rpc is closed, the shutdown sentinel will complete the shutdown sequence.
    */
   void close();

@@ -6,7 +6,6 @@ MROS::MROS() : logger_(Logger::getLogger()), check_logger_(false), status_(true)
 
 MROS::MROS(int argc, char **argv) : logger_(Logger::getLogger()), check_logger_(true), status_(true) {
   logger_.initialize(argc, argv, "MROS");
-  registerHandler();
 }
 
 MROS *MROS::mros_ptr_ = nullptr;

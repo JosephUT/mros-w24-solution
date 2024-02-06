@@ -1,27 +1,39 @@
 #include "mros/node.hpp"
 
+#include <iostream>
+
 Node::Node(const std::string &node_name) : logger_(Logger::getLogger()), core_(MROS::getMROS()), node_name_(node_name) {
   LogContext context("Node::Node");
   // Set up the client rpc socket with the Mediator server address.
+  bson_rpc_client_ = std::make_unique<ClientBsonRPCSocket>(AF_INET, "127.0.0.1", 13331);
 
-  // Get host:port of the client rpc socket and resolve it to the node URI.
-
-  // Make connecting json message with node_uri and node_name.
-
-  // Connect to the Mediator and start the rpc.
+  // Connect to the Mediator and send the node's name to start the rpc.
+  json connecting_message {{"node_name", node_name}};
+  try {
+    bson_rpc_client_->connectToServer(connecting_message);
+  } catch (std::exception const& e) {
+    logger_.info(e.what());
+  }
 
   // Spin off a thread to check for the two possible shutdown signals: status turning false, and the client being closed.
   shutdown_sentinel_ = std::thread(&Node::checkStatusAndHandleShutdown, this);
 }
 
-Node::~Node() {}
+Node::~Node() {
+  if (bson_rpc_client_->connected()) bson_rpc_client_->close();
+  shutdown_sentinel_.join();
+}
+
+bool Node::connected() {
+  return bson_rpc_client_->connected();
+}
 
 void Node::close() {
-
+  bson_rpc_client_->close();
 }
 
 void Node::checkStatusAndHandleShutdown() {
-  // TODO: Make this just wait on a condition variable. Should be signaled by at least MROS, closing callback, and user close().
+  // NOTE: This could be made to use a condition variable, but it would involve refactoring the signal handler.
   while (status() && bson_rpc_client_->connected()) {
     std::this_thread::sleep_for(10ms);
   }

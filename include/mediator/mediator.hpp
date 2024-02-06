@@ -11,6 +11,7 @@
 
 #include "logging/logging.hpp"
 #include "mros/mros.hpp"
+#include "mros/utils/utils.hpp"
 #include "socket/bson_rpc_socket/connection_bson_rpc_socket.hpp"
 #include "socket/server_socket.hpp"
 
@@ -64,7 +65,7 @@ class Mediator : public std::enable_shared_from_this<Mediator> {
    * Update node_table_ to add node. Use the pending_connection_ as the pointer to the connection socket for this node.
    * Nodes request this callback immediately after their connection is accepted.
    */
-  void addNode(const NodeURI &node_uri, const std::string node_name);
+  void addNode(const NodeURI &node_uri, const std::string &node_name);
 
   /**
    * Update tables to add publisher. Requests that all subscribing nodes connect to the new publisher. Nodes request
@@ -109,16 +110,17 @@ class Mediator : public std::enable_shared_from_this<Mediator> {
    */
   void jsonRemoveNodeCallback(Json const &json);
 
-  const TopicData getTopicData(const TopicName &topic_name);
-  const NodeData getNodeData(const NodeURI &node_uri);
+  TopicData getTopicData(const TopicName &topic_name);
+  NodeData getNodeData(const NodeURI &node_uri);
 
   std::unordered_map<TopicName, TopicData> topic_table_;
   std::unordered_map<NodeURI, NodeData> node_table_;
   std::mutex topic_table_mutex_;
   std::mutex node_table_mutex_;
 
+  std::vector<std::string> node_uris_;
+
   std::unique_ptr<ServerSocket> bson_rpc_server_;
-  std::shared_ptr<ConnectionBsonRPCSocket> pending_connection_;
 
   std::string address_;
   int port_;
