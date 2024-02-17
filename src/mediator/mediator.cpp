@@ -2,13 +2,15 @@
 
 #include <iostream>
 
-Mediator::Mediator() : Mediator("127.0.0.1", 13330) {}
+// Mediator::Mediator() : Mediator("127.0.0.1", 13330) {}
 
 Mediator::Mediator(std::string address, int port)
     : address_(std::move(address)), port_(port), mros_(MROS::getMROS()), logger_(Logger::getLogger()) {
   // Initialize the server and begin accepting connections.
+  LogContext context("Mediator::Mediator");
   try {
     bson_rpc_server_ = std::make_unique<ServerSocket>(AF_INET, address_, port_, 100);
+    logger_.debug("Made server");
     handleRPCConnections();
   } catch (std::exception const &e){
     logger_.info(e.what());
@@ -190,4 +192,8 @@ TopicData Mediator::getTopicData(const TopicName &topic_name) {
 NodeData Mediator::getNodeData(const NodeURI &node_uri) {
   std::lock_guard<std::mutex> node_table_guard(node_table_mutex_);
   return node_table_[node_uri];
+}
+
+bool Mediator::status() {
+  return mros_.status();
 }

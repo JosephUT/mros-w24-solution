@@ -46,7 +46,7 @@ class Mediator : public std::enable_shared_from_this<Mediator> {
    */
   Mediator(std::string address = "127.0.0.1", int port = 13330);
 
-  Mediator();
+  // Mediator();
   ~Mediator();
 
   /**
@@ -57,7 +57,7 @@ class Mediator : public std::enable_shared_from_this<Mediator> {
   /**
    * Check whether a termination signal has been sent to the process.
    */
-  bool status() { return mros_.status(); }
+  bool status();
 
   /** Callback functions **/
 

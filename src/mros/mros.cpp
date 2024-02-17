@@ -16,7 +16,9 @@ void MROS::init(int argc, char **argv) {
   mros_ptr_->registerHandler();
 }
 
-MROS &MROS::getMROS() { return *mros_ptr_; }
+MROS &MROS::getMROS() {
+  return *mros_ptr_;
+}
 
 Logger &MROS::getLogger() {
   if (!check_logger_) {

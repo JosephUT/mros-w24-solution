@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(nlohmann_json REQUIRED CONFIG)
 find_package(log4cxx CONFIG REQUIRED)
-#find_package(EXPAT REQUIRED)
+find_package(EXPAT REQUIRED)
 find_package(Threads REQUIRED)
 find_package(GTest REQUIRED)
 
@@ -23,7 +23,7 @@ add_library(mros_socket STATIC
         src/socket/socket.cpp
 )
 target_include_directories(mros_socket PUBLIC include)
-target_link_libraries(mros_socket PUBLIC log4cxx)
+target_link_libraries(mros_socket PUBLIC log4cxx EXPAT::EXPAT)
 
 # ---------------------------- MROS Library ----------------------------
 #add_library(mroslib
@@ -141,6 +141,15 @@ add_executable(test_manual_node
         src/mros/mros.cpp
 )
 target_link_libraries(test_manual_node mros_socket)
+
+add_executable(test_manual_mediator
+        test_manual/mros/test_manual_mediator.cpp
+        src/mediator/mediator.cpp
+        src/mros/mros.cpp
+        src/mros/utils/utils.cpp
+)
+
+target_link_libraries(test_manual_mediator mros_socket)
 
 #add_executable(test_json_rpc_client
 #        ${SOCKET_SOURCES}
