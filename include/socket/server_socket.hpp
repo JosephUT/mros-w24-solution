@@ -3,6 +3,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -60,6 +61,13 @@ class ServerSocket : public Socket {
   std::pair<std::string, int> getLastClientAddressPort() {
     return last_client_address_port_;
   }
+
+  /**
+   * Get the address and port of this socket. Useful mainly for recovering kernel-assigned addresses from initializing
+   * the port to 0 in the constructor.
+   * @return A pair containing this socket's address and port.
+   */
+  std::pair<std::string, int> getAddressPort();
 
   /**
    * Close the socket's file descriptor if it is not already closed.

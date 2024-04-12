@@ -1,2 +1,0 @@
-#include <mros/publisher.hpp>
-

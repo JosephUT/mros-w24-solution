@@ -1,43 +1,66 @@
-#ifndef MROS_W24_SOLUTION_MROS_HPP
-#define MROS_W24_SOLUTION_MROS_HPP
+#pragma once
 
-#include <memory>
 #include <atomic>
 #include <csignal>
+#include <functional>
+#include <memory>
+
 #include "logging/logging.hpp"
 
 class MROS {
-public:
-    ~MROS();
+ public:
+  ~MROS();
 
-    static void init(int argc, char** argv);
+  /**
+   * Set up the single instance of the class in this process. This must be called before any other functionality can
+   * be used.
+   */
+  static void init(int argc, char** argv);
 
-    static MROS& getMROS();
+  /**
+   * Get a reference to the single instance of the class in this process.
+   */
+  static MROS& getMROS();
 
-    Logger& getLogger();
+  /**
+   * Check if the instance has been set up and ctrl+C has not yet been pressed.
+   */
+  bool active();
 
-    bool status();
+  /**
+   * Register an additional routine to be executed on ctrl+C. By default ctrl+C will simply call set active_ to false.
+   */
+  void registerDeactivateRoutine(std::function<void(void)> const& function);
 
-    void registerHandler();
+  /**
+   * Deleted copy constructor for singleton class.
+   */
+  MROS(MROS const& other) = delete;
 
-    MROS(MROS const& mr) = delete;
+  /**
+   * Deleted assignment operator for singleton class.
+   */
+  void operator=(MROS const& other) = delete;
 
-    void operator=(MROS const& mros) = delete;
-protected:
-    static MROS* mros_ptr_;
-    Logger& logger_;
-    bool check_logger_;
-    std::atomic_bool status_;
-private:
-    MROS();
+ private:
+  MROS() = default;
+  MROS(int argc, char** argv);
 
-    MROS(int argc, char** argv);
+  /**
+   * Perform the deactivation routine if the instance has been set up. Static function to be registered as the ctrl+C
+   * (SIGINT) callback.
+   */
+  static void staticHandleSignal(int signal);
 
-    void handleSignal(int signal);
+  /**
+   * Deactivate the instance and run every registered deactivate_routine in the order they were registered. Called by
+   * staticHandleSignal().
+   */
+  void deactivate();
 
-    static void staticHandleSignal(int signal);
+  static MROS* mros_ptr_;
+  std::atomic<bool> active_;
+  std::vector<std::function<void(void)>> deactivate_routines_;
 
-    void deactivateSignal();
+  Logger& logger_;
 };
-
-#endif //MROS_W24_SOLUTION_MROS_HPP

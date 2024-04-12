@@ -28,6 +28,14 @@ ServerSocket::ServerSocket(const int domain, const std::string& address, const i
   if (listen(file_descriptor_, listen_backlog)) {
     throw SocketErrnoException("Failed to listen..");
   }
+
+  // If the port is zero the kernel will have assigned the socket a valid address on bind. This recovers the new value.
+  if (port == 0) {
+    socklen_t length = sizeof(server_address_);
+    if (getsockname(file_descriptor_, reinterpret_cast<struct sockaddr*>(&server_address_), &length) < 0) {
+      throw SocketErrnoException("Failed to get socket address.");
+    }
+  }
 }
 
 ServerSocket::~ServerSocket() { close(); }
@@ -66,6 +74,14 @@ std::shared_ptr<T> ServerSocket::acceptConnection()
   } else {
     return std::make_shared<T>(connection_file_descriptor);
   }
+}
+
+std::pair<std::string, int> ServerSocket::getAddressPort() {
+  char name[INET_ADDRSTRLEN];
+  char port_char[10];
+  getnameinfo(reinterpret_cast<sockaddr *>(&server_address_), sizeof(server_address_), name,
+              sizeof(name), port_char, sizeof(port_char), NI_NUMERICHOST | NI_NUMERICSERV);
+  return {std::string(name), stoi(std::string(port_char))};
 }
 
 void ServerSocket::close() {

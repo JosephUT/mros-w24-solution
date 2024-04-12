@@ -2,21 +2,19 @@
 
 #include <iostream>
 
-// Mediator::Mediator() : Mediator("127.0.0.1", 13330) {}
-
 Mediator::Mediator(std::string address, int port)
     : address_(std::move(address)), port_(port), mros_(MROS::getMROS()), logger_(Logger::getLogger()) {
   // Initialize the server and begin accepting connections.
-  LogContext context("Mediator::Mediator");
   try {
     bson_rpc_server_ = std::make_unique<ServerSocket>(AF_INET, address_, port_, 100);
-    logger_.debug("Made server");
     handleRPCConnections();
   } catch (std::exception const &e){
     logger_.info(e.what());
     logger_.info("Mroscore is already running. Terminating");
   }
 }
+
+Mediator::Mediator() : Mediator("127.0.0.1", 13330) {}
 
 Mediator::~Mediator() {}
 
@@ -60,6 +58,20 @@ void Mediator::handleRPCConnections() {
         return jsonAddSubscriberCallback(input_with_uri);
       });
 
+      // Register a removePublisher callback that automatically inserts this node's URI.
+      connection_socket->registerRequestCallback("removePublisher", [this, node_uri](json const &input) -> void {
+        json input_with_uri = input;
+        input_with_uri["node_uri"] = node_uri;
+        jsonRemovePublisherCallback(input_with_uri);
+      });
+
+      // Register a removeSubscriber callback that automatically inserts this node's URI.
+      connection_socket->registerRequestCallback("removeSubscriber", [this, node_uri](json const &input) -> void {
+        json input_with_uri = input;
+        input_with_uri["node_uri"] = node_uri;
+        jsonRemoveSubscriberCallback(input_with_uri);
+      });
+
       // Register a removeNode closing callback that automatically inserts this node's URI.
       connection_socket->registerClosingCallback([this, node_uri]() -> void { removeNode(node_uri); });
 
@@ -89,64 +101,76 @@ void Mediator::addNode(const NodeURI &node_uri, const std::string &node_name) {
 }
 
 void Mediator::addPublisher(const NodeURI &node_uri, const TopicName &topic_name, const AddressPort &address_port) {
-  // Update topic table.
+  LogContext context("Mediator::addPublisher");
+
+  // Update topic table with the new publishing node and get a list of the subscribing nodes.
   topic_table_mutex_.lock();
   topic_table_[topic_name].publishing_nodes.insert(node_uri);
-  std::vector<NodeURI> subscriber_uris(topic_table_[topic_name].subscribing_nodes.begin(),
-                                       topic_table_[topic_name].subscribing_nodes.end());
+  std::vector<NodeURI> subscribing_node_uris(topic_table_[topic_name].subscribing_nodes.begin(),
+                                             topic_table_[topic_name].subscribing_nodes.end());
   topic_table_mutex_.unlock();
 
   // Update node table and notify subscribing nodes of new publisher.
   node_table_mutex_.lock();
-  node_table_[node_uri].publisher_data_by_topic[topic_name].push_back(address_port);
-  for (auto const &subscriber_uri : subscriber_uris) {
-    node_table_[subscriber_uri].connection->sendRequest("connectToPublishers",
-                                                        {{"topic", topic_name},
-                                                         {"publisher_addresses", {address_port.host}},
-                                                         {"publisher_ports", {address_port.port}}});
+
+  // Update the node that created the new publisher with the new publisher.
+  node_table_[node_uri].publisher_addresses_by_topic[topic_name] = address_port;
+
+  // Request that all subscribing nodes connect their subscribers to the new publisher.
+  for (auto const &subscribing_node_uri : subscribing_node_uris) {
+    // Pack address and port into vectors to adhere to expected json message structure.
+    std::vector<std::string> publisher_addresses {address_port.host};
+    std::vector<int> publisher_ports {address_port.port};
+    node_table_[subscribing_node_uri].connection->sendRequest("connectSubscriberToPublishers",
+                                                              {{"topic_name", topic_name},
+                                                               {"publisher_addresses", publisher_addresses},
+                                                               {"publisher_ports", publisher_ports}});
   }
   node_table_mutex_.unlock();
   logger_.info("Added Publisher");
 }
 
 Json Mediator::addSubscriber(const NodeURI &node_uri, const TopicName &topic_name) {
-  // Update node table.
-  node_table_mutex_.lock();
-  node_table_[node_uri].subscriber_data_by_topic[topic_name]++;
-  node_table_mutex_.unlock();
+  LogContext context("Mediator::addSubscriber");
 
-  // Update topic table and get list of publishers to connect to.
+  // Update topic table and get list of publishing nodes.
   topic_table_mutex_.lock();
   topic_table_[topic_name].subscribing_nodes.insert(node_uri);
-  std::vector<AddressPort> publisher_addresses(topic_table_[topic_name].publishing_nodes.begin(),
-                                               topic_table_[topic_name].publishing_nodes.end());
+  std::vector<NodeURI> publishing_node_uris(topic_table_[topic_name].publishing_nodes.begin(),
+                                                topic_table_[topic_name].publishing_nodes.end());
   topic_table_mutex_.unlock();
 
-  // Encode request for this node to subscribe to the existing publishers.
+  // Update node table and get a list of publisher addresses for all publishing nodes.
+  node_table_mutex_.lock();
+  node_table_[node_uri].subscribed_topics.insert(topic_name);
   std::vector<std::string> addresses;
   std::vector<int> ports;
-  addresses.reserve(publisher_addresses.size());
-  ports.reserve(publisher_addresses.size());
-  for (const auto &address_port : publisher_addresses) {
-    addresses.emplace_back(address_port.host);
-    ports.emplace_back(address_port.port);
+  for (const auto& publishing_node_uri : publishing_node_uris) {
+    AddressPort address_port = node_table_[publishing_node_uri].publisher_addresses_by_topic[topic_name];
+    addresses.push_back(address_port.host);
+    ports.push_back(address_port.port);
   }
+  node_table_mutex_.unlock();
+
+  // Encode request for this node to subscribe to the existing publishers.
   logger_.info("Added Subscriber");
-  return json{{"topic", topic_name}, {"publisher_addresses", addresses}, {"publisher_ports", ports}};
+  return json{{"topic_name", topic_name}, {"publisher_addresses", addresses}, {"publisher_ports", ports}};
 }
 
 void Mediator::removeNode(const NodeURI &node_uri) {
+  LogContext context("Mediator::removeNode");
+
   // For each topic that the node publishes to, get the TopicName and remove this node as a publishing node in
   // topic_table_.
   topic_table_mutex_.lock();
-  for (const auto &topic_pub_data_it : node_table_[node_uri].publisher_data_by_topic) {
+  for (const auto &topic_pub_data_it : node_table_[node_uri].publisher_addresses_by_topic) {
     topic_table_[topic_pub_data_it.first].publishing_nodes.erase(node_uri);
   }
 
   // For each topic that the node subscribes to, get the TopicName and remove this node as a subscribing node in
   // topic_table_.
-  for (const auto &topic_sub_data_it : node_table_[node_uri].subscriber_data_by_topic) {
-    topic_table_[topic_sub_data_it.first].subscribing_nodes.erase(node_uri);
+  for (const auto &topic : node_table_[node_uri].subscribed_topics) {
+    topic_table_[topic].subscribing_nodes.erase(node_uri);
   }
   topic_table_mutex_.unlock();
 
@@ -159,6 +183,36 @@ void Mediator::removeNode(const NodeURI &node_uri) {
   logger_.info(info);
 }
 
+void Mediator::removePublisher(const NodeURI &node_uri, const TopicName &topic_name) {
+  LogContext context("Mediator::removePublisher");
+
+  // Update the topic_table_ to reflect that this node no longer publishes on this topic.
+  topic_table_mutex_.lock();
+  topic_table_[topic_name].publishing_nodes.erase(node_uri);
+  topic_table_mutex_.unlock();
+
+  // Update the node_table_ to reflect that this node no longer publishes on this topic.
+  node_table_mutex_.lock();
+  node_table_[node_uri].publisher_addresses_by_topic.erase(topic_name);
+  node_table_mutex_.unlock();
+  logger_.info("Removed Publisher");
+}
+
+void Mediator::removeSubscriber(const NodeURI &node_uri, const TopicName &topic_name) {
+  LogContext context("Mediator::removeSubscriber");
+
+  // Update the topic_table_ to reflect that this node no longer subscribes to this topic.
+  topic_table_mutex_.lock();
+  topic_table_[topic_name].subscribing_nodes.erase(node_uri);
+  topic_table_mutex_.unlock();
+
+  // Update the node_table_ to reflect that this node no longer subscribes to this topic.
+  node_table_mutex_.lock();
+  node_table_[node_uri].subscribed_topics.erase(topic_name);
+  node_table_mutex_.unlock();
+  logger_.info("Removed Subscriber");
+}
+
 void Mediator::jsonAddNodeCallback(Json const &json) {
   NodeURI node_uri = json["node_uri"];
   std::string node_name = json["node_name"];
@@ -168,9 +222,10 @@ void Mediator::jsonAddNodeCallback(Json const &json) {
 void Mediator::jsonAddPublisherCallback(Json const &json) {
   NodeURI node_uri = json["node_uri"];
   TopicName topic_name = json["topic_name"];
-  std::string address = json["address"];
-  int port = json["port"];
-  addPublisher(node_uri, topic_name, {address, port});
+  AddressPort address_port;
+  address_port.host = json["address"];
+  address_port.port = json["port"];
+  addPublisher(node_uri, topic_name, address_port);
 }
 
 Json Mediator::jsonAddSubscriberCallback(Json const &json) {
@@ -179,21 +234,14 @@ Json Mediator::jsonAddSubscriberCallback(Json const &json) {
   return addSubscriber(node_uri, topic_name);
 }
 
-void Mediator::jsonRemoveNodeCallback(Json const &json) {
+void Mediator::jsonRemovePublisherCallback(Json const &json) {
   NodeURI node_uri = json["node_uri"];
-  removeNode(node_uri);
+  TopicName topic_name = json["topic_name"];
+  return removePublisher(node_uri, topic_name);
 }
 
-TopicData Mediator::getTopicData(const TopicName &topic_name) {
-  std::lock_guard<std::mutex> topic_table_guard(topic_table_mutex_);
-  return topic_table_[topic_name];
-}
-
-NodeData Mediator::getNodeData(const NodeURI &node_uri) {
-  std::lock_guard<std::mutex> node_table_guard(node_table_mutex_);
-  return node_table_[node_uri];
-}
-
-bool Mediator::status() {
-  return mros_.status();
+void Mediator::jsonRemoveSubscriberCallback(Json const &json) {
+  NodeURI node_uri = json["node_uri"];
+  TopicName topic_name = json["topic_name"];
+  return removeSubscriber(node_uri, topic_name);
 }

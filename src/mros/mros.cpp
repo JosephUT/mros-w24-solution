@@ -1,54 +1,46 @@
 #include "mros/mros.hpp"
 
 #include <exception>
-
-MROS::MROS() : logger_(Logger::getLogger()), check_logger_(false), status_(true) {}
-
-MROS::MROS(int argc, char **argv) : logger_(Logger::getLogger()), check_logger_(true), status_(true) {
-  logger_.initialize(argc, argv, "MROS");
-}
+#include <iostream>
 
 MROS *MROS::mros_ptr_ = nullptr;
 
+MROS::MROS(int argc, char **argv) : logger_(Logger::getLogger()), active_(true) {
+  logger_.initialize(argc, argv, "MROS");
+}
+
+MROS::~MROS() { delete mros_ptr_; }
+
 void MROS::init(int argc, char **argv) {
+  if (mros_ptr_) throw std::logic_error("MROS already initialized");
   mros_ptr_ = new MROS(argc, argv);
-  mros_ptr_->logger_.debug("Logger init called");
-  mros_ptr_->registerHandler();
+  std::signal(SIGINT, &MROS::staticHandleSignal);
 }
 
 MROS &MROS::getMROS() {
   return *mros_ptr_;
 }
 
-Logger &MROS::getLogger() {
-  if (!check_logger_) {
-    throw std::logic_error("MROS never initialized");
-  }
-  return logger_;
+bool MROS::active() { return active_; }
+
+void MROS::registerDeactivateRoutine(std::function<void(void)> const &function) {
+  deactivate_routines_.push_back(function);
 }
-
-bool MROS::status() { return status_; }
-
-void MROS::handleSignal(int signal) { logger_.info("handleSignal: Terminating MROS"); }
 
 void MROS::staticHandleSignal(int signal) {
   if (mros_ptr_) {
-    mros_ptr_->logger_.debug("staticHandleSignal(): Signal handler called");
-    mros_ptr_->handleSignal(signal);
     if (signal == SIGINT) {
-      mros_ptr_->deactivateSignal();
+      mros_ptr_->deactivate();
     }
   }
 }
 
-void MROS::deactivateSignal() {
-  status_.store(false);
-  logger_.debug("Deactivating signal");
-}
+void MROS::deactivate() {
+  // Run every registered deactivate routine.
+  for (const auto& routine : deactivate_routines_) {
+    routine();
+  }
 
-void MROS::registerHandler() {
-  mros_ptr_ = this;
-  std::signal(SIGINT, &MROS::staticHandleSignal);
+  // Set the active flag to false.
+  active_ = false;
 }
-
-MROS::~MROS() { delete mros_ptr_; }

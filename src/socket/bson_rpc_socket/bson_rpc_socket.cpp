@@ -1,5 +1,7 @@
 #include "socket/bson_rpc_socket/bson_rpc_socket.hpp"
 
+#include <iostream>
+
 BsonRPCSocket::BsonRPCSocket() : is_connected_(false) {}
 
 BsonRPCSocket::~BsonRPCSocket() = default;
@@ -45,14 +47,12 @@ void BsonRPCSocket::sendRequestAndGetResponse(CallbackName const &callback_name,
 void BsonRPCSocket::registerRequestCallback(const CallbackName &callback_name, const RequestCallbackJson &callback) {
   std::lock_guard<std::mutex> request_lock_guard(request_callbacks_lock_);
   request_callbacks_[callback_name] = callback;
-  logger_.debug("rcb registered with name: " + callback_name);
 }
 
 void BsonRPCSocket::registerRequestResponseCallback(const CallbackName &callback_name,
                                                     const RequestResponseCallbackJson &callback) {
   std::lock_guard<std::mutex> request_response_lock_guard(request_response_callbacks_lock_);
   request_response_callbacks_[callback_name] = callback;
-  logger_.debug("rrcb registered with name: " + callback_name);
 }
 
 void BsonRPCSocket::registerClosingCallback(const ClosingCallback &callback) {
@@ -74,7 +74,6 @@ void BsonRPCSocket::receiveCycle() {
     } catch (PeerClosedException &error) {
     } catch (SocketException &error) {
     }
-    logger_.debug("Received message: " + received_message.dump());
     auto closing_message_iter = received_message.find("close");
     auto callback_name_iter = received_message.find("callback name");
     auto request_response_callback_iter = received_message.find("response callback name");
@@ -87,7 +86,7 @@ void BsonRPCSocket::receiveCycle() {
       BsonSocket::close();
       sending_lock_.unlock();
 
-      // exit closing callback if one is registered;
+      // Execute closing callback if one is registered;
       closing_callback_lock_.lock();
       if (closing_callback_set_) {
         closing_callback_();
@@ -114,13 +113,10 @@ void BsonRPCSocket::processRequest(json const &callback_argument) {
   auto request_callback_iterator = request_callbacks_.find(callback_name);
   if (request_callback_iterator != request_callbacks_.end()) {
     request_callback_iterator->second(callback_argument["message"]);
-  } else {
-    logger_.debug("callback name " + callback_name + " not found");
   }
 }
 
 void BsonRPCSocket::processRequestResponse(nlohmann::json const &callback_argument) {
-  LogContext context("processRequestResponse");
   std::lock_guard<std::mutex> lock_guard(request_response_callbacks_lock_);
   std::string const response_callback_name = callback_argument["response callback name"].get<std::string>();
   std::string const callback_name = callback_argument["callback name"].get<std::string>();
@@ -128,8 +124,6 @@ void BsonRPCSocket::processRequestResponse(nlohmann::json const &callback_argume
   if (request_response_callback_iter != request_response_callbacks_.end()) {
     json callback_result = request_response_callback_iter->second(callback_argument["message"]);
     sendRequest(response_callback_name, callback_result);
-  } else {
-    logger_.debug("response callback name " + callback_name + " not found");
   }
 }
 

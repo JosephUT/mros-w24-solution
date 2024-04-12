@@ -15,7 +15,7 @@ namespace Messages {
         static std::string messageName() {
             // return the exact name of the struct
             // idk how I want to handle namespaces
-            // i.e. Messages::String
+            // i.e. messages::String
             return "String";
         }
 
