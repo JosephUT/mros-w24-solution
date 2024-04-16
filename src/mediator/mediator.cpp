@@ -21,7 +21,7 @@ Mediator::~Mediator() {}
 void Mediator::handleRPCConnections() {
   LogContext context("Mediator::handleRPCConnections");
   // Check that the mediator has not been killed.
-  while (status()) {
+  while (mros_.active()) {
     // Attempt to accept a new connection, which is non-blocking.
     auto connection_socket = bson_rpc_server_->acceptConnection<ConnectionBsonRPCSocket>();
 

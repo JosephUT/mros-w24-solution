@@ -95,26 +95,40 @@ void Node::removePublisherByTopic(TopicName topic_name) {
 }
 
 void Node::disconnect() {
-  // Mark this Node as disconnected.
-  connected_ = false;
+  // Only perform routine if Node is connected to avoid duplicate action via ctrl+C calling the closing callback.
+  std::cout << "entering node disconnect" << std::endl;
+  if (connected_) {
+    std::cout << "setting connected to false" << std::endl;
+    // Mark this Node as disconnected.
+    connected_ = false;
+    std::cout << "successfully set connected to false" << std::endl;
 
-  // Close the rpc connection.
-  if (bson_rpc_client_->connected()) bson_rpc_client_->close();
-
-  // Disconnect all publishers.
-  for (const auto& topic_publisher : publishers_) {
-    if (auto publisher_ptr = topic_publisher.second.lock()) {
-      publisher_ptr->disconnect();
+    // Close the rpc connection.
+    std::cout << "before checking connection" << std::endl;
+    if (bson_rpc_client_->connected()) {
+      std::cout << "sending closing message" << std::endl;
+      bson_rpc_client_->close();
     }
-  }
+    std::cout << "after close" << std::endl;
 
-  // Disconnect all subscribers.
-  for (const auto& topic_subscriber : subscribers_) {
-    if (auto subscriber_ptr = topic_subscriber.second.lock()) {
-      subscriber_ptr->disconnect();
+    // Disconnect all publishers.
+    for (const auto& topic_publisher : publishers_) {
+      if (auto publisher_ptr = topic_publisher.second.lock()) {
+        publisher_ptr->disconnect();
+      }
     }
-  }
 
-  // Signal the condition variable to release any user thread blocked on spin().
-  spin_condition_variable_.notify_all();
+    // Disconnect all subscribers.
+    std::cout << "about to iterate through subscribers" << std::endl;
+    for (const auto& topic_subscriber : subscribers_) {
+      if (auto subscriber_ptr = topic_subscriber.second.lock()) {
+        std::cout << "disconnecting a subscriber" << std::endl;
+        subscriber_ptr->disconnect();
+      }
+    }
+    std::cout << "finished iterating through subscribers" << std::endl;
+
+    // Signal the condition variable to release any user thread blocked on spin().
+    spin_condition_variable_.notify_all();
+  }
 }

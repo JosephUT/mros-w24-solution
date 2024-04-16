@@ -1,19 +1,33 @@
-#include <iostream>
-#include "messages/exampleMessages.hpp"
-#include "mros/node.hpp"
+#include "gtest/gtest.h"
 
+#include "mros/subscriber.hpp"
 
-void foo(Messages::String const &msg) {
-    std::cout << msg.base << std::endl;
+TEST(Subscriber, TestBasic) {
+  ASSERT_TRUE(true);
 }
 
-int main(int argc, char **argv) {
-    MROS::init(argc, argv);
+/**
+ * Test ~Subscriber().
+ */
 
-    auto node = std::make_shared<Node>("testSub");
+/**
+ * Test spin().
+ */
 
-    auto sub = node->create_subscriber<Messages::String>("abc", 10, &foo);
-    node->spinOnce();
-    node->spin();
-    return 0;
-}
+/**
+ * Test spinOnce().
+ */
+
+/** TESTS FOR THE PRIVATE INTERFACE WITH NODE **/
+
+/**
+ * Test Subscriber(node, topic_name, queue_size, callback).
+ */
+
+/**
+ * Test connectToPublisher().
+ */
+
+/**
+ * Test disconnect().
+ */

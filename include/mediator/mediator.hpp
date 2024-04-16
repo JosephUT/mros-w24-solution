@@ -40,14 +40,16 @@ struct NodeData {
 
 class Mediator : public std::enable_shared_from_this<Mediator> {
  public:
+  Mediator();
+
+  ~Mediator();
+
   /**
    * Set up mediator to accept connections at a specific address and port.
    */
   Mediator(std::string address = "127.0.0.1", int port = 13330);
 
-  Mediator();
-  ~Mediator();
-
+ private:
   /**
    * Accept and set up connections from nodes until the process is terminated, shutdown all connections on termination.
    */

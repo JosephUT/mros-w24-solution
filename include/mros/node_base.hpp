@@ -2,14 +2,18 @@
 
 #include <string>
 
+#include "mros/utils/utils.hpp"
+
 /**
  * Interface class for Node to provide dependency inversion with Publisher and Subscriber.
  */
 class NodeBase {
   template <typename MessageT>
+  requires JsonConvertible<MessageT>
   friend class Publisher;
 
   template <typename MessageT>
+  requires JsonConvertible<MessageT>
   friend class Subscriber;
  protected:
   NodeBase() = default;

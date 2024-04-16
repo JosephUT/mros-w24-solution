@@ -1,11 +1,53 @@
-#include <iostream>
+#include "gtest/gtest.h"
+
 #include "mros/node.hpp"
 
-int main(int argc, char** argv) {
-    MROS::init(argc, argv);
-    
-    auto node = std::make_shared<Node>("Test1");
-    node->spinOnce();
-    node->spin();
-    return 0;
+TEST(Node, TestBasic) {
+  ASSERT_TRUE(true);
 }
+
+/**
+ * Test Node().
+ */
+
+/**
+ * Test ~Node().
+ */
+
+/**
+ * Test spin().
+ */
+
+/**
+ * Test spinOnce().
+ */
+
+/**
+ * Test createSubscriber().
+ */
+
+/**
+ * Test createPublisher().
+ */
+
+/** TESTS FOR THE PRIVATE INTERFACE WITH MEDIATOR, PUBLISHER, AND SUBSCRIBER **/
+
+/**
+ * Test connectSubscriberToPublishers().
+ */
+
+/**
+ * Test jsonConnectSubscriberToPublishersCallback().
+ */
+
+/**
+ * Test removeSubscriberByTopic().
+ */
+
+/**
+ * Test removePublisherByTopic().
+ */
+
+/**
+ * Test disconnect().
+ */

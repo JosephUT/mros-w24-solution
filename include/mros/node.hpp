@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "logging/logging.hpp"
+#include "mros/utils/utils.hpp"
 #include "mros/mros.hpp"
 #include "mros/node_base.hpp"
 #include "mros/publisher.hpp"
@@ -43,12 +44,14 @@ class Node : public std::enable_shared_from_this<Node>, public NodeBase {
    *
    */
   template <typename MessageT, typename CallbackT = void (*)(MessageT), typename SubscriberT = Subscriber<MessageT>>
+  requires JsonConvertible<MessageT>
   std::shared_ptr<SubscriberT> createSubscriber(std::string topic_name, std::uint32_t queue_size, CallbackT &&callback);
 
   /**
    *
    */
   template <typename MessageT, typename PublisherT = Publisher<MessageT>>
+  requires JsonConvertible<MessageT>
   std::shared_ptr<PublisherT> createPublisher(std::string topic_name);
 
  private:
@@ -109,6 +112,7 @@ class Node : public std::enable_shared_from_this<Node>, public NodeBase {
 };
 
 template <typename MessageT, typename PublisherT>
+requires JsonConvertible<MessageT>
 std::shared_ptr<PublisherT> Node::createPublisher(std::string topic_name) {
   // Copy the topic name to avoid using string invalidated by std::move().
   std::string temp_topic_name = topic_name;
@@ -131,6 +135,7 @@ std::shared_ptr<PublisherT> Node::createPublisher(std::string topic_name) {
 }
 
 template <typename MessageT, typename CallbackT, typename SubscriberT>
+requires JsonConvertible<MessageT>
 std::shared_ptr<SubscriberT> Node::createSubscriber(std::string topic_name, std::uint32_t queue_size,
                                                     CallbackT &&callback) {
   // Copy the topic name to avoid using string invalidated by std::move().
