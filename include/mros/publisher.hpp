@@ -115,14 +115,11 @@ void Publisher<MessageT>::publish(MessageT message) {
   // Send on all connections, removing the ones that throw an error.
   std::erase_if(subscriber_connections_, [json_message](std::shared_ptr<ConnectionBsonSocket> const& input) -> bool {
     try {
-      std::cout << "sending message" << std::endl;
       input->sendMessage(json_message);
       return false;
     } catch (PeerClosedException const& e) {
-      std::cout << "erasing subscriber connection peer closed" << std::endl;
       return true;
     } catch (...) {
-      std::cout << "erasing subscriber connection" << std::endl;
       return true;
     }
   });
@@ -137,10 +134,8 @@ void Publisher<MessageT>::acceptConnectionsUntilDisconnect() {
 
     // If a non-null connection was created, add it to the container of connections.
     if (subscriber_connection) {
-      std::cout << "accepted connection from subscriber" << std::endl;
       subscriber_connections_mutex_.lock();
       subscriber_connections_.push_back(subscriber_connection);
-      std::cout << "added connection socket to container" << std::endl;
       subscriber_connections_mutex_.unlock();
     }
     std::this_thread::sleep_for(10ms);

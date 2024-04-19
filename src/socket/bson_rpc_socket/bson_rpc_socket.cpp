@@ -7,7 +7,6 @@ BsonRPCSocket::BsonRPCSocket() : is_connected_(false) {}
 BsonRPCSocket::~BsonRPCSocket() = default;
 
 void BsonRPCSocket::close() {
-  std::cout << "RPC: entering close" << std::endl;
   if (is_connected_) {
     sending_lock_.lock();
     is_connected_.store(false);
@@ -15,9 +14,7 @@ void BsonRPCSocket::close() {
     sending_lock_.unlock();
 
     std::unique_lock<std::mutex> unique_closing_lock(closing_lock_);
-    std::cout << "RPC: waiting on closing message receive" << std::endl;
     closing_condition_variable_.wait(unique_closing_lock, [this]() -> bool { return this->closing_message_received_; });
-    std::cout << "RPC: finished waiting" << std::endl;
   }
 }
 
@@ -73,9 +70,7 @@ void BsonRPCSocket::receiveCycle() {
   json received_message;
   while (true) {
     try {
-      std::cout << "RPC: about to receive message" << std::endl;
       received_message = receiveMessage();
-      std::cout << "RPC: received message " << received_message << std::endl;
     } catch (PeerClosedException &error) {
     } catch (SocketException &error) {
     }
@@ -92,10 +87,8 @@ void BsonRPCSocket::receiveCycle() {
       sending_lock_.unlock();
 
       // Execute closing callback if one is registered;
-      std::cout << "RPC: here 1" << std::endl;
       closing_callback_lock_.lock();
       if (closing_callback_set_) {
-        std::cout << "RPC: about to call closing callback" << std::endl;
         closing_callback_();
       }
       closing_callback_lock_.unlock();
@@ -108,9 +101,7 @@ void BsonRPCSocket::receiveCycle() {
     } else if (request_response_callback_iter != received_message.end()) {
       processRequestResponse(received_message);
     } else if (callback_name_iter != received_message.end()) {
-      std::cout << "RPC: process request" << std::endl;
       processRequest(received_message);
-      std::cout << "RPC: process new request" << std::endl;
     }
     received_message.clear();
   }
@@ -140,7 +131,6 @@ void BsonRPCSocket::sendClosingMessage() {
   json message = {{"close", closing_callback_set_}};
   try {
     sendMessage(message);
-    std::cout << "RPC: sent closing message" << std::endl;
   } catch (PeerClosedException &error) {
   } catch (SocketException &error) {
   }

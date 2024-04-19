@@ -123,22 +123,17 @@ Subscriber<MessageT>::~Subscriber() {
 template <typename MessageT>
 requires JsonConvertible<MessageT>
 void Subscriber<MessageT>::disconnect() {
-  std::cout << "ABOUT TO SET CONNECTED TO FALSE" << std::endl;
   connected_ = false;
-  std::cout << "SET CONNECTED TO FALSE" << std::endl;
 }
 
 template <typename MessageT>
 requires JsonConvertible<MessageT>
 void Subscriber<MessageT>::connectToPublisher(std::string const& host, int port) {
-  std::cout << "attempting to connect to publisher at " << host << ":" << port << std::endl;
-  // Create a new client socket and connect it to the specified host and port.
   try {
+    // Create a new client socket and connect it to the specified host and port.
     auto client = std::make_shared<ClientBsonMessageSocket>(AF_INET, host, port);
     client->connect();
-    std::cout << "trying to lock" << std::endl;
     std::lock_guard<std::mutex> publisher_connection_mutex(publisher_connections_mutex_);
-    std::cout << "locked" << std::endl;
     publisher_connections_.insert({toURI(host, port), client});
 
     // If the receiving thread has not yet been started, start it. This will only happen on the first connection.
@@ -146,9 +141,7 @@ void Subscriber<MessageT>::connectToPublisher(std::string const& host, int port)
       receiving_thread_ = std::thread([this]() -> void { receiveMessagesUntilDisconnect(); });
   } catch (SocketException const& e) {
     // If setting up or connecting the socket has failed, assume the publisher has closed and return silently.
-    std::cout << "ERROR THROWN PEER CLOSED" << std::endl;
   } catch (...) {
-    std::cout << "ERROR THROWN" << std::endl;
   }
 }
 
@@ -177,48 +170,52 @@ void Subscriber<MessageT>::spinOnce() {
 template <typename MessageT>
 requires JsonConvertible<MessageT>
 void Subscriber<MessageT>::receiveMessagesUntilDisconnect() {
+  std::unordered_map<PublisherURI, std::shared_ptr<ClientBsonMessageSocket>> publisher_connections_duplicate;
   std::unordered_set<PublisherURI> disconnected_publisher_uris;
+  json json_message;
+  MessageT message;
   while (connected_) {
-    json message;
-    MessageT message_object;
-    disconnected_publisher_uris.clear();
-
-    // Lock the publisher connections container to avoid iterator issues if a connection was added during the loop.
+    // Copy out the publisher connections for this receive cycle to avoid holding a lock while calling receive().
     publisher_connections_mutex_.lock();
+    publisher_connections_duplicate = publisher_connections_;
+    publisher_connections_mutex_.unlock();
 
     // Receive a message and add it to the message queue for each connection.
-    for (const auto& uri_connection_pair : publisher_connections_) {
+    for (const auto& uri_connection_pair : publisher_connections_duplicate) {
       try {
         // Receive the message, which will throw PeerClosedException if the publisher has disconnected.
-        message = uri_connection_pair.second->receiveMessage();
-        message_object.set_from_json(message);
+        json_message = uri_connection_pair.second->receiveMessage();
+        message.set_from_json(json_message);
 
         // Drop messages from the front of the queue if the queue size has been exceeded and add the new message.
         message_queue_mutex_.lock();
         while (message_queue_.size() > queue_size_ + 1) {
           message_queue_.pop();
         }
-        message_queue_.push(message_object);
+        message_queue_.push(message);
 
         // If the queue was empty before adding the message, signal the queue condition variable.
         if (message_queue_.size() == 1) queue_empty_condition_variable_.notify_one();
         message_queue_mutex_.unlock();
+
+        // Add publisher connections that throw errors to the list of connections to be removed.
       } catch (PeerClosedException const& e) {
-        // If the peer has closed, add the publisher's uri to the set of disconnected publishers.
         disconnected_publisher_uris.insert(uri_connection_pair.first);
-        std::cout << "disconnecting from publisher, peer closed" << std::endl;
       } catch (...) {
         disconnected_publisher_uris.insert(uri_connection_pair.first);
-        std::cout << "disconnecting from publisher" << std::endl;
       }
     }
 
     // Remove all the disconnected publishers before the next cycle.
+    publisher_connections_mutex_.lock();
     for (const auto& publisher_uri : disconnected_publisher_uris) {
       publisher_connections_.erase(publisher_uri);
     }
     publisher_connections_mutex_.unlock();
-//    std::cout << "about to check connected" << std::endl;
+
+    // Erase all the data from this receive cycle.
+    disconnected_publisher_uris.clear();
+    publisher_connections_duplicate.clear();
   }
 }
 
